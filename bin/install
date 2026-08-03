@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# Install the AI Product Slice Harness into a project repository.
+set -euo pipefail
+
+HARNESS_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEMPLATE="$HARNESS_REPO/template"
+TARGET="${1:-.}"
+
+if [[ ! -d "$TEMPLATE" ]]; then
+  echo "Harness template missing at $TEMPLATE" >&2
+  exit 1
+fi
+
+mkdir -p "$TARGET"
+TARGET="$(cd "$TARGET" && pwd)"
+
+copy_file() {
+  local src="$1"
+  local dest="$2"
+  mkdir -p "$(dirname "$dest")"
+  cp "$src" "$dest"
+  if [[ "$src" == *.sh || "$src" == */write-phase-scripts.sh ]]; then
+    chmod +x "$dest"
+  fi
+  echo "  + ${dest#$TARGET/}"
+}
+
+echo "Installing AI Product Slice Harness into:"
+echo "  $TARGET"
+echo
+
+# Process doc + helpers
+copy_file "$TEMPLATE/docs/AI-PRODUCT-SLICE-HARNESS.md" "$TARGET/docs/AI-PRODUCT-SLICE-HARNESS.md"
+
+shopt -s nullglob
+for src in "$TEMPLATE/docs/ai-product-slice-harness/"*; do
+  base="$(basename "$src")"
+  if [[ "$base" == "config.env.example" ]]; then
+    continue
+  fi
+  copy_file "$src" "$TARGET/docs/ai-product-slice-harness/$base"
+done
+
+if [[ ! -f "$TARGET/docs/ai-product-slice-harness/config.env" ]]; then
+  copy_file "$TEMPLATE/docs/ai-product-slice-harness/config.env.example" \
+    "$TARGET/docs/ai-product-slice-harness/config.env"
+else
+  echo "  = docs/ai-product-slice-harness/config.env (kept existing)"
+fi
+
+# Subagent utilities + RA scripts + examples
+for src in "$TEMPLATE/subagents/"*.sh; do
+  copy_file "$src" "$TARGET/subagents/$(basename "$src")"
+done
+mkdir -p "$TARGET/subagents/examples"
+for src in "$TEMPLATE/subagents/examples/"*; do
+  copy_file "$src" "$TARGET/subagents/examples/$(basename "$src")"
+done
+
+# Notes generator
+copy_file "$TEMPLATE/scripts/generate-phase-07-notes.py" "$TARGET/scripts/generate-phase-07-notes.py"
+chmod +x "$TARGET/scripts/generate-phase-07-notes.py"
+
+# Makefile
+copy_file "$TEMPLATE/Makefile.harness" "$TARGET/Makefile.harness"
+if [[ ! -f "$TARGET/Makefile" ]]; then
+  cat >"$TARGET/Makefile" <<'EOF'
+# Project Makefile — includes AI Product Slice Harness targets.
+include Makefile.harness
+EOF
+  echo "  + Makefile"
+else
+  if ! grep -q 'Makefile.harness' "$TARGET/Makefile"; then
+    cat >>"$TARGET/Makefile" <<'EOF'
+
+# AI Product Slice Harness
+include Makefile.harness
+EOF
+    echo "  ~ Makefile (appended include Makefile.harness)"
+  else
+    echo "  = Makefile (already includes Makefile.harness)"
+  fi
+fi
+
+# Runtime dirs
+mkdir -p \
+  "$TARGET/subagents/logs" \
+  "$TARGET/subagents/status" \
+  "$TARGET/subagents/results" \
+  "$TARGET/docs/re-architectures" \
+  "$TARGET/docs/specs"
+
+for dir in subagents/logs subagents/status subagents/results docs/re-architectures; do
+  if [[ ! -f "$TARGET/$dir/.gitkeep" ]]; then
+    : >"$TARGET/$dir/.gitkeep"
+    echo "  + $dir/.gitkeep"
+  fi
+done
+
+if [[ ! -f "$TARGET/SUBAGENTS.md" ]]; then
+  cat >"$TARGET/SUBAGENTS.md" <<'EOF'
+# Sub-Agent Plan
+
+This file is the project phase plan for the AI Product Slice Harness.
+
+Current phase: Phase 01, Harness And Founder Vision.
+
+## Selected Products
+
+TBD after Phase 02 slice-up selection.
+
+## Customer Relationships
+
+TBD after Phase 02.
+
+## Commands
+
+After Phase 02 generates phase scripts:
+
+```sh
+make phase-3
+make phase-4
+make phase-5
+PHASE_CONFIRMED=1 make phase-6
+make phase-7-dry-run
+make phase-7
+make watch
+```
+
+See `docs/AI-PRODUCT-SLICE-HARNESS.md` for the full process.
+EOF
+  echo "  + SUBAGENTS.md"
+else
+  echo "  = SUBAGENTS.md (kept existing)"
+fi
+
+if [[ ! -f "$TARGET/docs/VERSION-HISTORY.md" ]]; then
+  cat >"$TARGET/docs/VERSION-HISTORY.md" <<'EOF'
+# Version History
+
+This file summarizes completed Phase 07 iteration runs.
+EOF
+  echo "  + docs/VERSION-HISTORY.md"
+fi
+
+# Soft gitignore hints
+if [[ -f "$TARGET/.gitignore" ]]; then
+  if ! grep -q 'subagents/logs' "$TARGET/.gitignore" 2>/dev/null; then
+    cat >>"$TARGET/.gitignore" <<'EOF'
+
+# AI Product Slice Harness — keep status/results committed if you want audit trails;
+# uncomment to ignore local agent noise:
+# subagents/logs/
+# subagents/status/
+# subagents/results/
+EOF
+    echo "  ~ .gitignore (appended harness notes)"
+  fi
+fi
+
+cat <<EOF
+
+Install complete.
+
+What you are getting into
+-------------------------
+This is a multi-phase AI/human build process. You do NOT ask one agent to
+"build the whole app." You capture a founder vision, slice the work into
+independent products that are customers of each other, then run scoped
+agents phase by phase with human review at the breaks.
+
+Next steps (Phase 01)
+---------------------
+1. cd "$TARGET"
+2. Dictate your founder vision to your IDE agent (or write docs/FOUNDER-vision.md).
+3. Ask the agent to:
+   - create/update README.md
+   - capture the founder vision
+   - propose a slice-up plan at docs/SLICE-UP-plan.md
+4. Read docs/AI-PRODUCT-SLICE-HARNESS.md so you know the phases ahead.
+5. After you choose a slice-up, have the agent scaffold packages and run:
+
+   bash docs/ai-product-slice-harness/write-phase-scripts.sh --help
+
+Requirements
+------------
+Phase 03+ shell fan-out currently invokes the Codex CLI (\`codex\`).
+Phase 01–02 are conversational IDE-agent work.
+
+Demo of this harness in a real project:
+https://github.com/unlox775/timelens-photo-scavenger-hunt
+EOF
