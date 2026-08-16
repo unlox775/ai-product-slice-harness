@@ -2,29 +2,44 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-PHASE="${1:-}"
+REQUESTED_PHASE="${1:-auto}"
+PHASE=""
 LINES="${2:-5}"
 INTERVAL="${3:-1}"
 RUN_ID="${4:-${PHASE_RUN_ID:-}}"
 
-if [[ -z "$PHASE" ]]; then
-  echo "Usage: $0 <phase-name> [tail-lines] [interval-seconds] [run-id]"
+if [[ "$REQUESTED_PHASE" == "-h" || "$REQUESTED_PHASE" == "--help" ]]; then
+  echo "Usage: $0 [auto|phase-name] [tail-lines] [interval-seconds] [run-id]"
+  echo "With no phase, keeps running and follows whichever phase starts next."
   echo "Example: $0 phase-03-product-specs 5 1"
   echo "Run filter: PHASE_RUN_ID=20260614220150 $0 phase-07-iterate 5 1"
   echo "Width override: WATCH_COLS=180 $0 phase-03-product-specs 5 1"
-  exit 2
+  exit 0
 fi
 
-if [[ -z "$RUN_ID" && -f "$ROOT_DIR/subagents/status/${PHASE}.latest-run" ]]; then
-  RUN_ID="$(sed -n '1p' "$ROOT_DIR/subagents/status/${PHASE}.latest-run")"
-fi
+select_phase() {
+  if [[ "$REQUESTED_PHASE" != "auto" ]]; then
+    PHASE="$REQUESTED_PHASE"
+    if [[ -z "$RUN_ID" && -f "$ROOT_DIR/subagents/status/${PHASE}.latest-run" ]]; then
+      RUN_ID="$(sed -n '1p' "$ROOT_DIR/subagents/status/${PHASE}.latest-run")"
+    fi
+    return
+  fi
+
+  PHASE=""
+  RUN_ID=""
+  if [[ -f "$ROOT_DIR/subagents/status/current-phase" ]]; then
+    PHASE="$(sed -n '1p' "$ROOT_DIR/subagents/status/current-phase")"
+    RUN_ID="$(sed -n '2p' "$ROOT_DIR/subagents/status/current-phase")"
+  fi
+}
 
 terminal_cols() {
   local cols=""
 
   if [[ -n "${WATCH_COLS:-}" ]]; then
     cols="$WATCH_COLS"
-  elif cols="$(stty size < /dev/tty 2>/dev/null | awk '{ print $2 }')"; then
+  elif cols="$(stty size 2>/dev/null < /dev/tty | awk '{ print $2 }')"; then
     :
   elif cols="$(stty size 2>/dev/null | awk '{ print $2 }')"; then
     :
@@ -132,6 +147,14 @@ render_phase() {
   COLS="$(terminal_cols)"
 
   print_line "${BOLD}$(date)${RESET}"
+  if [[ -z "$PHASE" ]]; then
+    print_line ""
+    print_line "Waiting for a harness phase to start."
+    print_line "Leave this window open; it will switch automatically."
+    return
+  fi
+
+  print_line "Phase: $PHASE"
   if [[ -n "$RUN_ID" ]]; then
     print_line "Run: $RUN_ID"
   fi
@@ -168,14 +191,18 @@ render_phase() {
   fi
 }
 
+restore_cursor() {
+  printf '\033[?25h\n'
+}
+
 printf '\033[?25l'
-trap 'printf "\033[?25h\n"' EXIT INT TERM
+trap restore_cursor EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 while true; do
+  select_phase
   output="$(render_phase)"
   printf '\033[H%s\033[J' "$output"
-  if phase_all_succeeded; then
-    break
-  fi
   sleep "$INTERVAL"
 done

@@ -1,4 +1,4 @@
-PHASE ?= phase-07-iterate
+PHASE ?= auto
 LINES ?= 5
 INTERVAL ?= 1
 ARGS ?=
@@ -17,10 +17,12 @@ else
 REARCH_ENV = REARCH_ID="$(REARCH_ID)"
 endif
 
-.PHONY: help harness-help phase-3 phase-4 phase-5 phase-6 phase-7 phase-7-serial phase-7-dry-run phase-7-notes phase-ra-3 phase-ra-4 phase-ra-5 phase-ra-6 phase-ra-complete phase-ra-abandon watch status
+.PHONY: help harness-help phase-2-5 phase-3-5 phase-3 phase-4 phase-5 phase-6 phase-7 phase-7-serial phase-7-dry-run phase-7-notes phase-ra-3 phase-ra-4 phase-ra-5 phase-ra-6 phase-ra-complete phase-ra-abandon watch status
 
 help harness-help:
 	@echo "AI Product Slice Harness targets:"
+	@echo "  HARNESS_COMMIT_DIRTY=1 make phase-2-5 Commit Phase 02, then run/commit 03–05"
+	@echo "  make phase-3-5                       Run and commit Phases 03–05 in order"
 	@echo "  make phase-3                         Run Phase 03 product-spec agents"
 	@echo "  make phase-4                         Run Phase 04 customer-request agents"
 	@echo "  make phase-5                         Run Phase 05 producer-response agents"
@@ -33,10 +35,18 @@ help harness-help:
 	@echo "  PHASE_CONFIRMED=1 make phase-ra-6    Gated re-architecture implementation"
 	@echo "  PHASE_CONFIRMED=1 make phase-ra-complete"
 	@echo "  make phase-ra-abandon                Mark selected re-architecture abandoned"
-	@echo "  make watch                           Watch latest run for PHASE=$(PHASE)"
+	@echo "  make watch                           Keep watching and follow active phases"
+	@echo "  make watch PHASE=phase-06-first-implementation"
+	@echo "                                       Keep watching one named phase"
 	@echo "  make status                          Show latest run status for PHASE=$(PHASE)"
 	@echo ""
-	@echo "Variables: PHASE, RUN_ID, REARCH_ID, LINES, INTERVAL, ARGS, PHASE_ONLY"
+	@echo "Variables: PHASE, RUN_ID, REARCH_ID, LINES, INTERVAL, ARGS, PHASE_ONLY, HARNESS_COMMIT_DIRTY"
+
+phase-2-5:
+	bash docs/ai-product-slice-harness/run-planning-phases.sh phase-2-5 "$(ARGS)"
+
+phase-3-5:
+	bash docs/ai-product-slice-harness/run-planning-phases.sh phase-3-5 "$(ARGS)"
 
 phase-3:
 	$(RUN_ENV) bash subagents/phase-03-product-specs.sh $(ARGS)
@@ -88,7 +98,17 @@ watch:
 	$(RUN_ENV) bash docs/ai-product-slice-harness/watch-phase.sh "$(PHASE)" "$(LINES)" "$(INTERVAL)"
 
 status:
-	@if [ -n "$(strip $(RUN_ID))" ]; then \
+	@if [ "$(PHASE)" = "auto" ] && [ -f "subagents/status/current-phase" ]; then \
+		active_phase="$$(sed -n '1p' subagents/status/current-phase)"; \
+		active_run="$$(sed -n '2p' subagents/status/current-phase)"; \
+		if [ -n "$$active_run" ]; then \
+			PHASE_RUN_ID="$$active_run" bash subagents/phase-status.sh "$$active_phase" --verbose; \
+		else \
+			bash subagents/phase-status.sh "$$active_phase" --verbose; \
+		fi; \
+	elif [ "$(PHASE)" = "auto" ]; then \
+		echo "No harness phase has started yet."; \
+	elif [ -n "$(strip $(RUN_ID))" ]; then \
 		PHASE_RUN_ID="$(RUN_ID)" bash subagents/phase-status.sh "$(PHASE)" --verbose; \
 	elif [ -f "subagents/status/$(PHASE).latest-run" ]; then \
 		PHASE_RUN_ID="$$(sed -n '1p' "subagents/status/$(PHASE).latest-run")" bash subagents/phase-status.sh "$(PHASE)" --verbose; \

@@ -57,7 +57,10 @@ AI:
 - As the current IDE agent, perform the one-time architecture setup across all
   selected products. This is the last planned phase where the current IDE agent
   owns multiple products at once.
-- For each selected product, create its package folder, `README.md`, `docs/specs/`, and package-level `customers/` folder.
+- For each selected piece, create its exact `apps/<name>`,
+  `packages/ui/<name>`, `packages/lib/<name>`, or
+  `packages/datastore/<name>` folder with `README.md`, `docs/specs/`, and
+  `customers/`.
 - For each selected product, create a timestamped stub spec under `docs/specs/` that briefly names the product goal, direct-observation UIs, expected interfaces, and TODO for the later product-spec agent.
 - For each known consumer-to-producer relationship, create a placeholder customer document in the producing package's `customers/` folder.
 - Create the root sub-agent phase plan (`SUBAGENTS.md`).
@@ -74,6 +77,20 @@ Phase output:
 - Placeholder customer documents.
 - Root sub-agent plan.
 - Runnable Phase 03, Phase 04, Phase 05, Phase 06, and Phase 07 shell scripts.
+- A Git checkpoint before package-specific planning begins.
+
+After reviewing the scaffold, the normal handoff is one command:
+
+```sh
+HARNESS_COMMIT_DIRTY=1 make phase-2-5
+```
+
+The explicit flag means: "I reviewed every current local change and want it in
+the Phase 02 checkpoint." The command commits that checkpoint, runs all of Phase
+03, then Phase 04, then Phase 05, and creates a separate commit after each
+successful round. It stops immediately on a blocked or failed round. If Phase 02
+was already committed, use `make phase-3-5`; that form requires a clean
+worktree.
 
 ### Phase 03: Product Specs
 
@@ -81,9 +98,8 @@ Phase 03 is the first shell-run background-agent phase.
 
 Human:
 
-- Review the scaffolded packages, stub specs, and customer placeholders.
-- Work with AI manually on any obvious scaffold corrections before fan-out.
-- When ready, run the Phase 03 shell script.
+- Approve the Phase 02 scaffold and start the combined Phase 02–05 or 03–05
+  command.
 
 AI:
 
@@ -107,9 +123,8 @@ Phase output:
 
 Human:
 
-- Review the completed product specs from Phase 03.
-- Work with AI manually to resolve any blocked or obviously incomplete product specs.
-- When ready, run the Phase 04 shell script.
+- No routine action. The combined planning command starts this round after every
+  Phase 03 agent succeeds and the Phase 03 commit is created.
 
 AI:
 
@@ -125,9 +140,8 @@ Phase output:
 
 Human:
 
-- Review the customer-request sections from Phase 04.
-- Work with AI manually to resolve missing, contradictory, or blocked customer requests.
-- When ready, run the Phase 05 shell script.
+- No routine action. The combined planning command starts this round after every
+  Phase 04 relationship succeeds and the Phase 04 commit is created.
 
 AI:
 
@@ -149,7 +163,8 @@ Phase output:
 
 Human:
 
-- Review the completed specs and producer responses.
+- Review the separate Phase 02, 03, 04, and 05 commits and the completed specs
+  and producer responses.
 - Decide that the package plans are ready for first implementation.
 - When ready, run the implementation phase shell script.
 
@@ -168,7 +183,7 @@ Phase output:
 
 - Package MVPs.
 - Direct-observation UIs.
-- Tests or validation evidence.
+- Tests or validation results.
 - Logs and status files for each implementation agent.
 
 ### Phase 07: Iterate
@@ -274,9 +289,15 @@ For each founder vision, capture:
 
 ## Break The Company Into Products
 
-Inside the company-level vision are multiple products that work together to create the final output. Each product is like a small company inside the larger company.
+Inside the company-level vision are multiple jobs that work together to create
+the final output. Some become apps, some reusable packages, and some explicit
+data stores. Do not assume every technical handoff should become a separate
+founder-facing product.
 
-Each internal product should have its own reason to exist. It should not only be a silent cog in the larger machine. It should be a well-rounded, understandable, demonstrable product with its own inputs, outputs, behavior, and value.
+Each reusable package should have one understandable reason to exist and a
+direct way to prove its input and output. That does not require turning every
+package into a production app or exposing its internal machinery in the final
+navigation.
 
 The same metaphor applies to software packages and libraries. Each package should be able to prove its independence. It should create value by itself, even if its most important long-term role is being imported into another product.
 
@@ -284,7 +305,172 @@ The same metaphor applies to software packages and libraries. Each package shoul
 
 After the founder perspective is captured, create a slice-up plan before creating separate project documents or package directories. The slice-up plan is the architect's proposal for how the vision could become independently valuable products.
 
-The first version should include two or three alternative breakdown philosophies. A slice-up philosophy is primarily about product boundaries, not build sequence. Each alternative should explain what it optimizes for, what products it would create, what its risks are, and how the pieces would later assemble into the final application.
+The plan must make the system easier to explain, not merely give technical
+boundaries impressive names. If the architect cannot describe a boundary with a
+short verb, a concrete input, and a concrete output, the boundary is not ready.
+Say that the split is unclear and keep working instead of hiding the uncertainty
+behind terms such as "shared normalization," "semantic interpretation,"
+"orchestration," or "field-level provenance."
+
+### First write the plain-language job map
+
+Before proposing products, list the jobs the system must perform in the order a
+person would explain them. Use ordinary verbs. For example:
+
+- find the play links on a publisher's catalog pages;
+- read what one play page says;
+- turn the publisher's wording into the fields the database uses;
+- flag wording that cannot be interpreted safely;
+- save the downloaded source page and the database record;
+- browse and search accepted plays.
+
+For each job, show one example input and one example output. When a job contains
+two independently testable actions, split it. When two proposed products both
+appear to perform the same job, stop and resolve that overlap before scaffolding.
+
+Add a short project lexicon near the top. Give stable, plain names to the main
+things and operations so later documents can say exactly what calls what. Prefer
+names such as `findPlayLinks`, `readPlayPage`, `interpretCast`, `saveSourcePage`,
+and `searchPlays`. These are planning names, not frozen implementation APIs.
+
+Names must come from the founder's domain or describe the literal contents.
+Avoid generic architecture words such as "evidence," "trust," "registry,"
+"orchestration," and "provenance" unless the founder already uses and
+understands that word. For example, prefer `Source Store` when the thing holds
+downloaded publisher pages, found URLs, scan progress, and source wording. If a
+name requires a paragraph before a founder can guess what is inside, rename it.
+
+### Classify every proposed piece
+
+Use only two top-level monorepo kinds:
+
+```text
+apps/
+packages/
+  ui/
+  lib/
+  datastore/
+```
+
+- **`apps/`:** runnable products and runnable package-playground shells. The
+  production app owns navigation and the user's mental model. A backend handoff
+  is not automatically a separate app.
+- **`packages/ui/`:** reusable screens and visual components. A UI package
+  receives view data and calls named interfaces; it does not silently own
+  persistence or business rules.
+- **`packages/lib/`:** reusable behavior and the main functions that perform
+  work. A lib package owns no durable production data.
+- **`packages/datastore/`:** durable information with one named authority,
+  lifecycle, and read/write contract. A cache, search index, or exported version
+  must be called a derived copy when it is not the authority.
+
+“Package” remains the generic term. UI, lib, and datastore are package
+categories, not additional top-level concepts. Every proposed piece must include
+its exact path so `packages/foo` does not hide which category it belongs to.
+
+For each datastore package, name exactly what it keeps, who writes it, who reads
+it, and what it does not own. For every lib and UI package, say explicitly that
+it owns no durable data. Never let folder placement or generated files imply
+data ownership silently.
+
+A standard local `apps/package-playgrounds` app may host direct-observation
+routes implemented by `packages/ui/*`. The app supplies navigation, shared
+layout, and unmistakable fixture/real-data banners. Each UI package owns its
+actual playground screen and calls the corresponding lib or datastore package.
+
+### Give every piece an interface inventory
+
+The slice-up plan must make each proposed app and package concrete
+enough that the next agent cannot replace clarity with a generic dashboard.
+Every piece gets a short interface inventory containing:
+
+1. **Boundary:** one sentence saying what it does and one sentence saying what
+   the neighboring piece does instead.
+2. **Main callable interfaces:** the small set of named operations that make the
+   piece useful. Show an example function-style name, input, output, caller, and
+   store read or changed. These are planning contracts, not final syntax.
+3. **Normal product screens:** for an app or UI package, name each primary
+   screen, what appears there, the main action, and which real store or package
+   supplies it.
+4. **Direct-observation screens:** for a lib, UI, or datastore package, name each playground
+   screen or tab, the controls on it, what appears before and after the action,
+   and the exact question it answers.
+5. **Data mode:** label every playground screen as fixture, generated, real
+   read-only, real write, or a deliberate choice between them. State the safe
+   default. Never leave it unclear whether a demonstration is showing six fake
+   records or the real retained catalog.
+6. **Secondary tools:** put settings, raw events, hashes, versions, timing, and
+   debug logs in a clearly secondary screen or disclosure. Name it, but do not
+   let it substitute for the main input and output.
+
+A datastore package also needs a direct-observation inspector. Its primary interfaces
+are ordinary reads and writes such as `savePage`, `getRun`, `listClaims`,
+`savePlay`, or `listReviewQueue`. Its inspector should show the actual records,
+relationships, and write history in plain language. Real-data mode should
+normally be read-only; mutations should go through the package that owns the
+business rule or through an explicitly marked sandbox.
+
+Do not accept phrases such as "operator workbench," "debug view," or "shows
+telemetry" as an interface description. Name the screen, its controls, its data
+source, and what the person sees after pressing the main button.
+
+### Develop at least two real alternatives
+
+The first version must include at least two genuinely developed breakdowns.
+Do not write one recommendation and a paragraph of token alternatives. Give
+each alternative the same basic treatment:
+
+- its apps and packages, with every package categorized under `ui`, `lib`, or
+  `datastore`;
+- the plain jobs assigned to each piece;
+- simple operation names, inputs, and outputs;
+- who calls whom;
+- an end-to-end example using one concrete record;
+- what the real user sees on the first screen;
+- the interface inventory and data mode for every piece;
+- what each package or store showcase proves by itself;
+- the finished-picture walkthrough;
+- strengths, risks, and the reason someone might honestly choose it.
+
+A useful alternative changes a meaningful boundary: for example, grouping work
+by user journey versus grouping source-specific adapters separately. Renaming
+the same boxes is not an alternative.
+
+### End every alternative with the finished picture
+
+After describing boundaries and interfaces, close each alternative with a short
+section titled **"When this is built, this is what you get."** Write it from the
+founder/operator's future point of view, as though the first useful version now
+exists.
+
+The section must say, in simple order:
+
+1. What real starting data, customer, device, source, or scenario is working in
+   the first useful version.
+2. Which app the person opens and exactly what appears first.
+3. The ordinary actions they take—start, continue, add, review, search, export,
+   or whatever verbs fit the domain.
+4. Which UI, lib, and datastore packages perform each important action, without
+   turning the walkthrough into implementation jargon.
+5. Where any AI-assisted judgment or Composite Agentic Gate actually runs, what
+   it may propose, what independently checks it, and where an unsupported result
+   stops for human attention.
+6. How the person adds the second real source/input/customer/device after the
+   first one works. Show a representative UI action, command, file path, or
+   function shape when that makes the extension concrete.
+7. The visible end state the founder receives—for example, several loaded
+   sources feeding one searchable catalog—rather than merely saying the
+   packages are integrated.
+
+This is not a project schedule. It is the operating story of the completed
+slice: "go here, do this, see that, resolve this, and end up with this useful
+thing." A founder should be able to read only this closing section and decide
+whether the alternative produces the product they meant.
+
+Commands, routes, and function names in this section may be planning shapes
+rather than frozen implementation syntax, but label them that way. Do not omit
+the extension story. A slice that works only for one hard-coded fixture has not
+painted a credible finished picture.
 
 Keep the rejected alternatives in the slice-up plan. They are useful design memory. As the team chooses one direction, update the document to record the selected approach and the reasons for choosing it.
 
@@ -293,17 +479,59 @@ Do not create all product project documents until the slice-up plan has been rev
 Each slice-up philosophy should include:
 
 - The principle it optimizes for.
-- The candidate products it creates.
+- The exact app and package paths it creates.
+- The exact job and data ownership of every piece.
+- The short operations each customer calls and the data passed between them.
 - The direct-observation UI or UIs for each candidate product.
 - The external events each product exposes to consumers.
 - The internal telemetry or debug logs each product makes visible.
 - The way the products assemble into the final application.
 - The strengths, risks, and tradeoffs of that breakdown.
-- The evidence a founder/developer walkthrough would need in order to choose or reject it.
+- The concrete walkthrough results a founder/developer would need in order to
+  choose or reject it.
 
-Each candidate product in a slice-up plan must include a concrete direct-observation user interface description. This is the local founder/developer consumer experience used to prove the product by itself. It should describe what appears on screen, what the operator can control, what state is visible, what outputs are produced, and what events or telemetry are shown as the product runs.
+### Walk the data, then walk the user experience
 
-The goal is to make the internal machine observable. If the product records chunks, the showcase should show chunks appearing. If it emits events, the showcase should show those events in a live feed. If it changes state, the showcase should show the state before and after the change. There should be as few invisible background behaviors as possible.
+Every alternative needs two separate walkthroughs.
+
+The data walkthrough follows one concrete item from its first input to its saved
+record and final use. At every step say:
+
+1. which operation runs;
+2. which package runs it;
+3. what goes in and what comes out;
+4. which store is read or changed;
+5. what happens when the operation is uncertain or fails.
+
+The user walkthrough starts at the real app's default screen with realistic
+data, not a fixture picker or an internal identifier. It must prove that the
+user can answer the central question from the founder vision. Internal hashes,
+versions, events, and rollback controls belong in secondary diagnostics unless
+the founder actually needs them for the ordinary job.
+
+If these two walkthroughs cannot be told without switching meanings for a term
+or guessing which product owns a step, the slice is not coherent yet.
+
+### Direct observation proves one useful operation
+
+Each lib and datastore package in a slice-up plan must include a concrete
+direct-observation UI package description. This is a test bench or store inspector for
+the founder or developer, not another production app and not a wall of internal
+machinery. A package screen should put a representative input on the left, the
+output on the right, and the reason for that output nearby. A store screen
+should make the saved records and their relationships browsable.
+
+For each main operation, answer the atomic question directly. Examples:
+
+- "Given this catalog page, which play links did `findPlayLinks` return?"
+- "Given this play page, which source claims did `readPlayPage` return?"
+- "Given this cast phrase, how did `interpretCast` represent it and what remains
+  unknown?"
+
+Fixtures are pieces of material pushed through the machine. They should make the
+operation repeatable, but fixture selection, event streams, schemas, and IDs
+must not become the apparent product. The showcase may expose deeper telemetry
+behind a details control.
 
 The direct-observation UI standard belongs here, in the harness, so it can be carried to every project. Project-specific slice-up documents should apply this standard rather than redefining it.
 
@@ -314,6 +542,8 @@ For each direct-observation UI, describe:
 - The intended device or viewport: iPhone model class, iPad, desktop browser, terminal width, simulator, physical device, or responsive range.
 - Orientation and layout assumptions: portrait, landscape, both, fixed-size, responsive, split view, or other constraints.
 - Inputs: fixtures, generated data, live device inputs, uploaded files, simulated streams, or other materials the operator can feed into the product.
+- Data mode and safe default: fixture, generated, real read-only, real write, or
+  a clearly labeled switch between them.
 - Controls: buttons, toggles, mode switches, seeded scenarios, reset actions, and failure simulations.
 - Internal state: queues, timers, selected records, derived decisions, current mode, pending changes, or intermediate artifacts.
 - Outputs: records, chunks, files, photos, transformed data, recommendations, reusable UI bricks, or other produced artifacts.
@@ -322,6 +552,15 @@ For each direct-observation UI, describe:
 - Walkthrough value: what a founder/developer should learn by operating this product directly.
 
 Do not leave the direct-observation UI as an abstract idea. A product spec should make it clear what the first implementation will actually be built as. For an iOS-first product, that usually means naming an iPhone-runnable SwiftUI app, Xcode target, or package example that can be installed on a simulator or physical iPhone. For a web-first product, that usually means naming the local web server, route, viewport assumptions, and framework. The details can change later, but the first spec must choose a concrete starting point so implementation agents can push back, estimate, and build.
+
+Before presenting the plan, perform a plain-language pass:
+
+- shorten names that need repeated explanation;
+- define unavoidable specialist terms once;
+- replace claims of "ownership" with the actual data or action owned;
+- replace broad phrases with input/action/output examples;
+- verify that the founder-facing app is coherent even though its code is modular;
+- state "this boundary is still unclear" anywhere the handoff is not understood.
 
 ## Re-Slice A Project Midstream
 
@@ -442,7 +681,7 @@ During the migration:
   surfaces stabilize.
 - Old routes can remain behind debug flags or temporary navigation while the new
   package surfaces are proven.
-- Each migrated surface should have validation evidence from the package showcase
+- Each migrated surface should have validation results from the package showcase
   and from the final app integration.
 - When a producer package changes a contract, create downstream request specs for
   consumers instead of silently editing them in the same pass.
@@ -454,7 +693,18 @@ package had that responsibility in the first slice-up.
 
 ## Organize The Repo As A Monorepo
 
-When the work moves from planning into implementation, create a monorepo-style project where the final production application is one workspace package and each internal product is its own workspace package.
+When the work moves from planning into implementation, use this monorepo shape:
+
+```text
+apps/
+packages/
+  ui/
+  lib/
+  datastore/
+```
+
+Each runnable product or playground shell is an app workspace. Each reusable
+piece is a package workspace in the category that says what it owns.
 
 Most internal packages should have two customers:
 
@@ -656,11 +906,19 @@ Phase scripts should make it easy to choose parallel or one-at-a-time execution.
 
 Phase scripts should also support filtered reruns. A human should be able to rerun only one product or relationship after fixing context, instead of relaunching the whole phase. The standard helper supports this with `PHASE_ONLY=<run-label>`, where product labels are package/app basenames such as `final-ios-app`, and relationship labels use `<consumer>-uses-<producer>`.
 
-When a phase runs in parallel, the runner should print a macOS-compatible watch command before launching agents. The standard helper should include a watcher script that refreshes once per second, prints phase statuses, and tails the last few lines of every matching log. For example:
+The standard helper includes one persistent macOS-compatible watcher. Start it
+once, before any shell phase:
 
 ```sh
-bash docs/ai-product-slice-harness/watch-phase.sh phase-03-product-specs 5 1
+make watch
 ```
+
+It waits when nothing is running, automatically switches when a new phase
+starts, refreshes once per second, prints current statuses, and tails the last
+few lines of matching logs. It stays open after success so Phase 03 can flow
+into 04 and 05, or Phase 06 and later Phase 07 runs, without Ctrl-C and a new
+command. A named phase can still be pinned for debugging with
+`make watch PHASE=phase-06-first-implementation`.
 
 When a sub-agent is blocked, preserve its log and status. A later rerun should be able to read the previous log, understand where it stopped, and continue after the blocker is resolved.
 
@@ -716,12 +974,15 @@ look at the product's customers, consumers, and newly exposed behavior. If the
 work creates a new expectation for another package or the final app, create or
 suggest a downstream request spec for that receiving product.
 
-## Build Multi-Use Libraries
+## Build Multi-Use Packages
 
-Most internal products should be built as software libraries with at least two use cases:
+Most internal behavior should live under `packages/lib/`, reusable screens under
+`packages/ui/`, and durable authorities under `packages/datastore/`. A package
+should normally have at least two use cases:
 
-1. They can be imported into the final application or another larger product.
-2. They can be imported into their own showcase product or user interface.
+1. It can be imported into the final application or another package.
+2. Its interface can be exercised through `apps/package-playgrounds`, usually
+   by a matching UI package.
 
 The showcase product is both a marketing tool and a debugging tool. It lets us operate that part of the system on its own, without requiring the whole final application to exist.
 

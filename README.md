@@ -20,8 +20,8 @@ Instead you get a multi-phase collaboration:
 1. You describe the founder vision.
 2. AI proposes a few ways to **slice** the vision into independently valuable products.
 3. **You** choose the boundaries.
-4. AI scaffolds packages, stub specs, and customer documents.
-5. Parallel agents write product specs, then customer requests, then producer responses.
+4. AI scaffolds runnable apps plus UI, lib, and datastore packages, stub specs, and customer documents.
+5. One planning command runs product specs, then customer requests, then producer responses, with a Git checkpoint after every round.
 6. Implementation agents build each package’s MVP and a direct-observation showcase.
 7. You walk the showcases, write feedback as timestamped specs, and iterate—still one product (or one relationship) at a time.
 
@@ -41,6 +41,21 @@ Eventually some of the supervision may become more automatic. That is secondary.
 
 **Scoped agents.** After scaffolding, an agent owns one package or one consumer→producer relationship—not the whole monorepo.
 
+**Plain jobs and explicit data.** Slice plans begin with ordinary verbs, example
+inputs and outputs, and a short lexicon. Every proposed piece is labeled as an
+`apps/*`, `packages/ui/*`, `packages/lib/*`, or `packages/datastore/*`. Lib and
+UI packages own no durable data; datastore packages name their authority.
+
+**Visible interfaces.** Every app, package, and store names its main callable
+interfaces and concrete screens before scaffolding. Package playgrounds and
+store inspectors label fixture, generated, real read-only, and real-write modes
+so sample data can never masquerade as the real product.
+
+**Finished picture.** Every slice alternative ends with the founder's future
+operating story: what real first case works, which app they open, what they do,
+where AI-assisted judgment stops for checks or attention, how they add the next
+case, and what useful end state they receive.
+
 ---
 
 ## The phases
@@ -48,10 +63,8 @@ Eventually some of the supervision may become more automatic. That is secondary.
 | Phase | Mode | What happens |
 |------:|------|--------------|
 | **01** | You + IDE agent | Install harness, capture founder vision, propose slice-up alternatives |
-| **02** | You + IDE agent | Choose boundaries; scaffold packages, customers, `SUBAGENTS.md`, phase scripts |
-| **03** | Parallel shell agents | One product-spec agent per package |
-| **04** | Parallel shell agents | One customer-request agent per relationship |
-| **05** | Parallel shell agents | One producer-response agent per package |
+| **02** | You + IDE agent | Choose boundaries; scaffold packages, stores, customers, `SUBAGENTS.md`, phase scripts; commit checkpoint |
+| **03–05** | Shell planning sequence | Product specs → customer requests → producer responses, with a commit after each round |
 | **06** | Shell agents (gated) | First implementation; human confirms before launch |
 | **07** | Parallel shell agents | Iterate unresolved timestamped feedback specs; final app last |
 | **RA** | IDE + shell | Midstream re-architecture when the first slice was useful but wrong |
@@ -103,17 +116,21 @@ make harness-help
 bash docs/ai-product-slice-harness/write-phase-scripts.sh --help
 ```
 
-5. Run phases with human review between them:
+5. Start the persistent watcher once, then run all three planning rounds:
 
 ```sh
-make phase-3
-make phase-4
-make phase-5
+make watch
+HARNESS_COMMIT_DIRTY=1 make phase-2-5
+# Or, when Phase 02 is already committed: make phase-3-5
 PHASE_CONFIRMED=1 make phase-6
 make phase-7-dry-run
 make phase-7
-make watch
 ```
+
+`phase-2-5` refuses to include existing local changes until you explicitly set
+`HARNESS_COMMIT_DIRTY=1` after reviewing them. `phase-3-5` requires a clean
+worktree. Both stop on a blocked or failed round. `make watch` remains open and
+automatically follows the current phase; pin `PHASE=...` only when debugging.
 
 Create feedback during Phase 07 with:
 

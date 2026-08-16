@@ -118,13 +118,11 @@ TBD after Phase 02.
 After Phase 02 generates phase scripts:
 
 ```sh
-make phase-3
-make phase-4
-make phase-5
+make watch
+HARNESS_COMMIT_DIRTY=1 make phase-2-5
 PHASE_CONFIRMED=1 make phase-6
 make phase-7-dry-run
 make phase-7
-make watch
 ```
 
 See `docs/AI-PRODUCT-SLICE-HARNESS.md` for the full process.
@@ -165,9 +163,10 @@ Install complete.
 What you are getting into
 -------------------------
 This is a multi-phase AI/human build process. You do NOT ask one agent to
-"build the whole app." You capture a founder vision, slice the work into
-independent products that are customers of each other, then run scoped
-agents phase by phase with human review at the breaks.
+"build the whole app." You capture a founder vision, map its plain-language
+jobs and data ownership, slice the work into runnable apps plus UI, lib, and
+datastore packages, then run scoped agents with human review at the meaningful
+breaks.
 
 Next steps (Phase 01)
 ---------------------
@@ -181,6 +180,10 @@ Next steps (Phase 01)
 5. After you choose a slice-up, have the agent scaffold packages and run:
 
    bash docs/ai-product-slice-harness/write-phase-scripts.sh --help
+
+6. Start make watch once. After reviewing the scaffold, run:
+
+   HARNESS_COMMIT_DIRTY=1 make phase-2-5
 
 Requirements
 ------------

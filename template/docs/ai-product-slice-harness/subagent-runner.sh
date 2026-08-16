@@ -32,6 +32,10 @@ HARNESS_DRY_RUN_FOUND=0
 start_phase() {
   HARNESS_PHASE="$1"
   mkdir -p "$HARNESS_LOG_DIR" "$HARNESS_STATUS_DIR" "$HARNESS_RESULT_DIR"
+  {
+    printf '%s\n' "$HARNESS_PHASE"
+    printf '%s\n' "$HARNESS_RUN_ID"
+  } >"$HARNESS_STATUS_DIR/current-phase"
   if [[ -n "$HARNESS_RUN_ID" ]]; then
     printf '%s\n' "$HARNESS_RUN_ID" >"$HARNESS_STATUS_DIR/${HARNESS_PHASE}.latest-run"
   fi
@@ -91,12 +95,8 @@ run_enqueued_agents_in_parallel() {
 }
 
 _print_phase_watch_command() {
-  echo "Watching another terminal:"
-  if [[ -n "$HARNESS_RUN_ID" ]]; then
-    echo "  PHASE_RUN_ID=$HARNESS_RUN_ID bash docs/ai-product-slice-harness/watch-phase.sh $HARNESS_PHASE 5 1"
-  else
-    echo "  bash docs/ai-product-slice-harness/watch-phase.sh $HARNESS_PHASE 5 1"
-  fi
+  echo "Persistent watcher (safe to start once and leave open):"
+  echo "  make watch"
   echo
 }
 
@@ -458,13 +458,20 @@ Read:
 
 Your job:
 1. Expand or revise the product specs under ${product_path}/docs/specs/ into complete workable specs.
-2. Include product goals, boundaries, library or UI surface, direct-observation UI details, customer assumptions, event and telemetry expectations, validation steps, and first implementation checklist.
-3. Make every direct-observation UI concrete: name the runtime, device or viewport, orientation assumptions, project or target shape, and how a founder/developer launches it.
-4. If this project is iOS-first, specify whether each direct-observation UI is an iPhone-runnable app, SwiftUI showcase, Xcode target, Swift package example, or another concrete iOS runner.
-5. Fill the top third of each customer document inside ${product_path}/customers/ with this product producer-side understanding of that customer.
-6. Leave the customer-request and producer-response sections as TODO placeholders for later phases.
-7. Do not edit files outside ${product_path}.
-8. Before finishing, write your phase result to this file: __HARNESS_RESULT_FILE__
+2. Use the short names and plain-language jobs from the slice-up plan. Define any unavoidable specialist term the first time it appears.
+3. State whether this product lives under apps/, packages/ui/, packages/lib/, or packages/datastore/. Apps are runnable; UI packages own reusable screens; lib packages own behavior; datastore packages own durable data. Name the durable data it owns, or say explicitly that it owns none.
+4. For every main operation, name a concrete input, action, and output. Prefer simple function-level language such as "findPlayLinks(listingPage) returns play URLs" over broad abstractions.
+5. Include an interface inventory. For each callable interface, state the caller, input, output, store read or changed, and failure result.
+6. Name every normal product screen and every direct-observation screen or tab. For each, list what appears there, the main controls, what changes after the main action, and the exact question the screen answers.
+7. Label the data mode of every direct-observation screen as fixture, generated, real read-only, real write, or a deliberate switch between modes. State the safe default and make real versus sample data visually unmistakable.
+8. If this is a data store, define its small read/write interface and a record inspector UI. Real-data inspection should default to read-only; test writes should use a clearly marked sandbox unless the product spec requires an approved mutation path.
+9. Include product goals, boundaries, library or UI surface, customer assumptions, event and telemetry expectations, validation steps, and first implementation checklist.
+10. Make every direct-observation UI concrete: name the runtime, device or viewport, orientation assumptions, project or target shape, and how a founder/developer launches it. Center the UI on the useful package input and output; keep fixtures and internal IDs secondary.
+11. If this project is iOS-first, specify whether each direct-observation UI is an iPhone-runnable app, SwiftUI showcase, Xcode target, Swift package example, or another concrete iOS runner.
+12. Fill the top third of each customer document inside ${product_path}/customers/ with this product producer-side understanding of that customer.
+13. Leave the customer-request and producer-response sections as TODO placeholders for later phases.
+14. Do not edit files outside ${product_path}.
+15. Before finishing, write your phase result to this file: __HARNESS_RESULT_FILE__
 
 Result file format:
 STATUS: succeeded|blocked|failed

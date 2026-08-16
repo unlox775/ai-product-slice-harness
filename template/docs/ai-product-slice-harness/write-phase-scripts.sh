@@ -18,7 +18,7 @@ Usage:
   bash docs/ai-product-slice-harness/write-phase-scripts.sh [options]
 
 Options:
-  --product <path>                 Add a product path (packages/... or apps/...)
+  --product <path>                 Add an apps/... or packages/{ui,lib,datastore}/... path
   --relation <consumer>:<producer>[:customer-file]
                                    Consumer->producer customer relationship.
                                    customer-file defaults to the consumer basename.
@@ -31,15 +31,17 @@ Options:
 
 Example:
   bash docs/ai-product-slice-harness/write-phase-scripts.sh \
-    --product packages/audio-chunk-recorder \
-    --product packages/volume-silence-analyzer \
+    --product packages/lib/audio-chunk-recorder \
+    --product packages/lib/volume-silence-analyzer \
+    --product packages/ui/recording-playground-ui \
     --product apps/final-app \
-    --relation apps/final-app:packages/audio-chunk-recorder \
-    --relation apps/final-app:packages/volume-silence-analyzer \
-    --relation packages/volume-silence-analyzer:packages/audio-chunk-recorder \
+    --relation packages/ui/recording-playground-ui:packages/lib/audio-chunk-recorder \
+    --relation apps/final-app:packages/ui/recording-playground-ui \
+    --relation packages/lib/volume-silence-analyzer:packages/lib/audio-chunk-recorder \
     --final-app apps/final-app \
-    --implementation-order packages/audio-chunk-recorder \
-    --implementation-order packages/volume-silence-analyzer \
+    --implementation-order packages/lib/audio-chunk-recorder \
+    --implementation-order packages/lib/volume-silence-analyzer \
+    --implementation-order packages/ui/recording-playground-ui \
     --implementation-order apps/final-app
 EOF
 }
@@ -381,4 +383,6 @@ echo "wrote $OUT_DIR/phase-07-iterate.sh"
 
 echo
 echo "Phase scripts ready under $OUT_DIR."
-echo "Next: review SUBAGENTS.md, then run: bash subagents/phase-03-product-specs.sh"
+echo "Next: review the Phase 02 scaffold and keep 'make watch' open."
+echo "Then commit Phase 02 and run all planning rounds with:"
+echo "  HARNESS_COMMIT_DIRTY=1 make phase-2-5"
