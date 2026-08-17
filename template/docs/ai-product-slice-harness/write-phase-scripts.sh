@@ -9,6 +9,7 @@ PRODUCTS=()
 RELATIONS=() # consumer_path|producer_path|customer_file
 FINAL_APP=""
 IMPLEMENTATION_ORDER=()
+PHASE04_LABELS=()
 IOS_SANDBOX=0
 FORCE=0
 
@@ -33,15 +34,13 @@ Example:
   bash docs/ai-product-slice-harness/write-phase-scripts.sh \
     --product packages/lib/audio-chunk-recorder \
     --product packages/lib/volume-silence-analyzer \
-    --product packages/ui/recording-playground-ui \
     --product apps/final-app \
-    --relation packages/ui/recording-playground-ui:packages/lib/audio-chunk-recorder \
-    --relation apps/final-app:packages/ui/recording-playground-ui \
+    --relation apps/final-app:packages/lib/audio-chunk-recorder \
+    --relation apps/final-app:packages/lib/volume-silence-analyzer \
     --relation packages/lib/volume-silence-analyzer:packages/lib/audio-chunk-recorder \
     --final-app apps/final-app \
     --implementation-order packages/lib/audio-chunk-recorder \
     --implementation-order packages/lib/volume-silence-analyzer \
-    --implementation-order packages/ui/recording-playground-ui \
     --implementation-order apps/final-app
 EOF
 }
@@ -96,6 +95,16 @@ if [[ "${#IMPLEMENTATION_ORDER[@]}" -eq 0 ]]; then
   IMPLEMENTATION_ORDER=("${PRODUCTS[@]}")
 fi
 
+for rel in "${RELATIONS[@]}"; do
+  IFS='|' read -r consumer producer _ <<<"$rel"
+  PHASE04_LABELS+=("$(basename "$consumer")-uses-$(basename "$producer")")
+done
+for product in "${PRODUCTS[@]}"; do
+  if [[ "$product" == packages/* ]]; then
+    PHASE04_LABELS+=("$(basename "$product")-isolation-demo")
+  fi
+done
+
 mkdir -p "$OUT_DIR"
 
 write_or_die() {
@@ -120,6 +129,20 @@ emit_basenames_require() {
       printf '  "%s"\n' "$(basename "$item")"
     else
       printf '  "%s" \\\n' "$(basename "$item")"
+    fi
+  done
+}
+
+emit_labels_require() {
+  local -a labels=("$@")
+  local i=0
+  local n="${#labels[@]}"
+  for label in "${labels[@]}"; do
+    i=$((i + 1))
+    if [[ "$i" -eq "$n" ]]; then
+      printf '  "%s"\n' "$label"
+    else
+      printf '  "%s" \\\n' "$label"
     fi
   done
 }
@@ -176,6 +199,11 @@ echo "wrote $OUT_DIR/phase-03-product-specs.sh"
       echo "enqueue_customer_request_agent \"$consumer\" \"$producer\" \"$customer\""
     done
   fi
+  for product in "${PRODUCTS[@]}"; do
+    if [[ "$product" == packages/* ]]; then
+      echo "enqueue_isolation_demo_request_agent \"$product\""
+    fi
+  done
   cat <<'FTR'
 
 run_enqueued_agents_in_parallel
@@ -196,22 +224,11 @@ echo "wrote $OUT_DIR/phase-04-customer-requests.sh"
   echo 'start_phase "phase-05-producer-responses"'
   echo 'set_phase_context "$*"'
   echo
-  if [[ "${#RELATIONS[@]}" -gt 0 ]]; then
+  if [[ "${#PHASE04_LABELS[@]}" -gt 0 ]]; then
     echo 'require_phase_successes "phase-04-customer-requests" \'
-    i=0
-    n="${#RELATIONS[@]}"
-    for rel in "${RELATIONS[@]}"; do
-      i=$((i + 1))
-      IFS='|' read -r consumer producer _ <<<"$rel"
-      label="$(basename "$consumer")-uses-$(basename "$producer")"
-      if [[ "$i" -eq "$n" ]]; then
-        printf '  "%s"\n' "$label"
-      else
-        printf '  "%s" \\\n' "$label"
-      fi
-    done
+    emit_labels_require "${PHASE04_LABELS[@]}"
   else
-    echo '# require_phase_successes "phase-04-customer-requests" "<consumer>-uses-<producer>" ...'
+    echo '# No Phase 04 customer requests are configured.'
   fi
   echo
   for product in "${PRODUCTS[@]}"; do

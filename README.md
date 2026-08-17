@@ -22,12 +22,12 @@ Instead you get a multi-phase collaboration:
 3. **You** choose the boundaries.
 4. AI scaffolds runnable apps plus UI, lib, and datastore packages, stub specs, and customer documents.
 5. One planning command runs product specs, then customer requests, then producer responses, with a Git checkpoint after every round.
-6. Implementation agents build each package’s MVP and a direct-observation showcase.
-7. You walk the showcases, write feedback as timestamped specs, and iterate—still one product (or one relationship) at a time.
+6. Implementation agents build each package’s MVP and package-local Isolation Demo.
+7. You walk the Isolation Demos, write feedback as timestamped specs, and iterate—still one product (or one relationship) at a time.
 
 Humans make product judgment calls at the phase breaks. Agents do scoped package work after those breaks.
 
-Eventually some of the supervision may become more automatic. That is secondary. The load-bearing requirement is a human in the loop who can see the slices, the customer contracts, and the showcases, and steer when boundaries are wrong.
+Eventually some of the supervision may become more automatic. That is secondary. The load-bearing requirement is a human in the loop who can see the slices, the customer contracts, and the Isolation Demos, and steer when boundaries are wrong.
 
 ---
 
@@ -37,7 +37,15 @@ Eventually some of the supervision may become more automatic. That is secondary.
 
 **Customers of each other.** Packages declare consumers in `customers/` documents (producer understanding → customer request → producer response). That is how parallel agents negotiate interfaces without inventing incompatible ones.
 
-**Direct observation.** Every slice gets a concrete showcase. If the machine emits events or transforms data, you can watch it happen.
+**Isolation Demo.** Every package gets exactly one package-local runnable UI
+that operates it without the production app. It is the package factory floor and
+a standing customer, not another package or phase agent.
+
+**Team-sized slices.** A selected package should be important enough to justify
+a long-lived internal team, backlog, and maintenance lifecycle. Pages, forms,
+modals, and inspectors stay inside the app or owning package. The slice-up major
+headings, imagined team roster, and Phase 03 product agents must match one to
+one.
 
 **Scoped agents.** After scaffolding, an agent owns one package or one consumer→producer relationship—not the whole monorepo.
 
@@ -45,6 +53,12 @@ Eventually some of the supervision may become more automatic. That is secondary.
 inputs and outputs, and a short lexicon. Every proposed piece is labeled as an
 `apps/*`, `packages/ui/*`, `packages/lib/*`, or `packages/datastore/*`. Lib and
 UI packages own no durable data; datastore packages name their authority.
+UI packages are reserved for substantial, independently valuable UI systems—not
+ordinary app screens, search forms, inspectors, or component extraction.
+
+**No hidden products.** Every app or package passed to the phase runner must
+have a peer-level major heading in the selected alternative. The heading count
+is the Phase 03 agent count; supporting bullets cannot silently become packages.
 
 **Visible interfaces.** Every app, package, and store names its main callable
 interfaces and concrete screens before scaffolding. Package playgrounds and
@@ -167,7 +181,7 @@ Project-specific phase scripts (`phase-03`…`phase-07`) are **generated per pro
 
 ## Demo: Timelens
 
-[Timelens Photo Scavenger Hunt](https://github.com/unlox775/timelens-photo-scavenger-hunt) used this process end-to-end: founder vision → slice-up → parallel package agents → customer contracts → package showcases → final iOS app → Phase 07 feedback loops → a midstream re-architecture when ownership boundaries needed to move.
+[Timelens Photo Scavenger Hunt](https://github.com/unlox775/timelens-photo-scavenger-hunt) used this process end-to-end: founder vision → slice-up → parallel package agents → customer contracts → package Isolation Demos → final iOS app → Phase 07 feedback loops → a midstream re-architecture when ownership boundaries needed to move.
 
 That repo still uses an earlier on-disk naming (`docs/STANDARD-project-harness.md`). This repository is the cleaned, installable extraction of the mature harness.
 

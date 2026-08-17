@@ -45,7 +45,7 @@ ${SCOPE_SUMMARY}
 
 Each implementation agent should work on its own product according to the completed RA specs/customer docs.
 Use a strangler migration where old app-owned surfaces need to be replaced by package-owned surfaces.
-Prefer proving package-owned surfaces and direct-observation UIs before final app integration, unless specs explicitly call for a small integration bridge.
+Prefer proving package-owned surfaces and package-local Isolation Demos before final app integration, unless specs explicitly call for a small integration bridge.
 Run focused validation where practical and document what passed or could not run.
 Do not mark the re-architecture succeeded; that is the later completion phase after human validation.
 
@@ -389,5 +389,5 @@ _write_phase_group_status \
 print_human_checkpoint \
   "RA-06 Implementation" \
   "Ran one implementation agent per selected unresolved re-architecture spec, with packages processed before the final app." \
-  "Validate the app and package showcases. If the re-architecture is truly complete, run the completion command so the plan becomes terminal and the main docs can be reconciled." \
+  "Validate the app and package Isolation Demos. If the re-architecture is truly complete, run the completion command so the plan becomes terminal and the main docs can be reconciled." \
   "make phase-ra-complete"

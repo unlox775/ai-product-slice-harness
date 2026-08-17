@@ -61,8 +61,14 @@ AI:
   `packages/ui/<name>`, `packages/lib/<name>`, or
   `packages/datastore/<name>` folder with `README.md`, `docs/specs/`, and
   `customers/`.
-- For each selected product, create a timestamped stub spec under `docs/specs/` that briefly names the product goal, direct-observation UIs, expected interfaces, and TODO for the later product-spec agent.
+- For each selected product, create a timestamped stub spec under `docs/specs/`
+  that briefly names the product goal, expected interfaces, and—for every
+  package—the package-local Isolation Demo.
 - For each known consumer-to-producer relationship, create a placeholder customer document in the producing package's `customers/` folder.
+- For every selected package under `packages/`, create
+  `isolation-demo/README.md` as the placeholder for its package-local runnable
+  target and `customers/00-isolation-demo.md` as the standing human customer that
+  asks to operate the package by itself. Neither is another product or package.
 - Create the root sub-agent phase plan (`SUBAGENTS.md`).
 - Generate Phase 03–07 shell scripts with
   `bash docs/ai-product-slice-harness/write-phase-scripts.sh` (see that script's
@@ -103,7 +109,7 @@ Human:
 
 AI:
 
-- Run one product-spec agent per package.
+- Run one product-spec agent per selected app/package heading.
 - Each agent works only on its own product.
 - Each agent fleshes out its package spec.
 - Each agent fills the top third of its customer documents with the producer's understanding of each customer.
@@ -129,11 +135,13 @@ Human:
 AI:
 
 - Run one customer-request agent per consumer-to-producer relationship.
+- Run one Isolation Demo customer-request agent for every selected package.
 - Each consumer fills the middle third of the producer's customer document with its requested needs.
 
 Phase output:
 
-- Customer-request sections in producer customer documents.
+- Customer-request sections in producer customer documents, including exactly
+  one `00-isolation-demo.md` request per package.
 - Logs and status files for each relationship agent.
 
 ### Phase 05: Producer Responses
@@ -172,7 +180,8 @@ AI:
 
 - Run implementation agents in parallel worktrees where possible.
 - Each implementation agent works on one package or one clearly isolated work item.
-- Each implementation agent builds the package MVP and direct-observation UI from the completed spec.
+- Each package implementation agent builds the package MVP and its package-local
+  Isolation Demo from the completed spec.
 - For implementation, prefer dependency order when downstream products need upstream package outputs. Build lower-level producers first, then dependent packages, then the final application. Parallel implementation is still useful for independent leaves, but the script should make dependency ordering explicit.
 - When implementation and validation are complete for a spec, the Phase 06 agent
   should mark that spec `Spec Status: resolved` and add a Resolution section.
@@ -182,7 +191,7 @@ AI:
 Phase output:
 
 - Package MVPs.
-- Direct-observation UIs.
+- One separately launchable Isolation Demo per package.
 - Tests or validation results.
 - Logs and status files for each implementation agent.
 
@@ -190,7 +199,7 @@ Phase output:
 
 Human:
 
-- Review one or more product showcases or the final app.
+- Review one or more package Isolation Demos or the final app.
 - Turn feedback into timestamped work-order specs under the relevant product's `docs/specs/` folder.
 - Run the iteration phase after the desired feedback specs are written.
 
@@ -352,12 +361,14 @@ packages/
   datastore/
 ```
 
-- **`apps/`:** runnable products and runnable package-playground shells. The
-  production app owns navigation and the user's mental model. A backend handoff
+- **`apps/`:** substantial runnable products. The production app owns navigation
+  and the user's mental model. A backend handoff or a collection of debug routes
   is not automatically a separate app.
-- **`packages/ui/`:** reusable screens and visual components. A UI package
-  receives view data and calls named interfaces; it does not silently own
-  persistence or business rules.
+- **`packages/ui/`:** substantial, independently valuable UI systems. Use this
+  only when the UI itself is a major going concern with complex behavior,
+  multiple consumers, and enough scope to justify its own product agent. Do not
+  extract ordinary screens, forms, search pages, inspectors, or components just
+  because this folder category exists.
 - **`packages/lib/`:** reusable behavior and the main functions that perform
   work. A lib package owns no durable production data.
 - **`packages/datastore/`:** durable information with one named authority,
@@ -368,15 +379,77 @@ packages/
 categories, not additional top-level concepts. Every proposed piece must include
 its exact path so `packages/foo` does not hide which category it belongs to.
 
+Every selected app and package must have a peer-level major heading in each
+alternative. The heading must carry the full boundary, interfaces, screens, data
+mode, and finished-picture role. A bullet nested under another package cannot
+quietly become a generated product, customer-doc owner, or phase agent.
+
+Before Phase 02, print the exact count: for example, "one app, four lib packages,
+zero UI packages, and two datastore packages—seven Phase 03 agents." The
+`--product` list passed to `write-phase-scripts.sh` must match those headings
+one-for-one. Adding a product that the founder saw only as a supporting bullet
+is a slice-up error and requires another decision checkpoint.
+
 For each datastore package, name exactly what it keeps, who writes it, who reads
 it, and what it does not own. For every lib and UI package, say explicitly that
 it owns no durable data. Never let folder placement or generated files imply
 data ownership silently.
 
-A standard local `apps/package-playgrounds` app may host direct-observation
-routes implemented by `packages/ui/*`. The app supplies navigation, shared
-layout, and unmistakable fixture/real-data banners. Each UI package owns its
-actual playground screen and calls the corresponding lib or datastore package.
+Isolation Demos do not imply UI packages or another shared playground app. Each
+demo is a runnable target or example inside the package it exercises. Create a
+separate UI package or app only when it meets the same substantial-team test and
+appears as its own fully described major heading.
+
+### Slice as though staffing long-lived internal teams
+
+Each selected package is a major company division with its own backlog,
+maintenance burden, customers, and continuing reason to exist. Before creating
+a package, ask: **Would we hire and retain a team to own this area?**
+
+A credible package normally has:
+
+- a durable business or technical responsibility, not one page or component;
+- several related capabilities that change together;
+- meaningful interfaces used by at least one production customer;
+- an ongoing roadmap, debugging surface, and maintenance lifecycle;
+- enough independent value that a team can improve it without loading the
+  entire final application into its head;
+- exactly one package-local Isolation Demo through which humans can operate and
+  understand that package alone.
+
+Do not create a package for a confirmation modal, edit form, route, search box,
+store inspector screen, or other task that would not justify a standing team.
+Keep those inside the app or owning package. The same bar applies to UI
+packages: only a substantial UI system with its own behavior, multiple uses,
+and ongoing product lifecycle should become a package.
+
+The goal is usually two to six major packages, adjusted only when the founder can
+clearly defend a different count. Fewer coherent teams are better than a large
+set of tiny agents that each understand only a fragment.
+
+A slice alternative is invalid if its major headings, Phase 03 product list, and
+imagined team roster differ. They are three views of the same decision.
+
+### Every package has exactly one Isolation Demo
+
+An **Isolation Demo** is the package factory floor: a separately launchable,
+package-local UI for playing with every primary interface without launching or
+depending on the production app. It shows inputs, outputs, intermediate state,
+events, failure behavior, and explanations with fixtures or clearly labeled
+real data.
+
+The Isolation Demo:
+
+- is a standing founder/developer customer of the package;
+- is documented at `customers/00-isolation-demo.md`, sorted before package customers;
+- uses the same public interfaces promised to production customers;
+- lives inside the package as a runnable target or example;
+- is built and maintained by the same package team;
+- is never another app/package heading or Phase 03 product agent.
+
+Apps are already directly runnable and do not automatically need an Isolation
+Demo. A selected UI package still does: its demo renders that UI system alone
+with controllable sample states and interactions.
 
 ### Give every piece an interface inventory
 
@@ -389,12 +462,13 @@ Every piece gets a short interface inventory containing:
 2. **Main callable interfaces:** the small set of named operations that make the
    piece useful. Show an example function-style name, input, output, caller, and
    store read or changed. These are planning contracts, not final syntax.
-3. **Normal product screens:** for an app or UI package, name each primary
+3. **Normal product screens:** for an app or selected UI package, name each primary
    screen, what appears there, the main action, and which real store or package
    supplies it.
-4. **Direct-observation screens:** for a lib, UI, or datastore package, name each playground
-   screen or tab, the controls on it, what appears before and after the action,
-   and the exact question it answers.
+4. **Isolation Demo:** for each package, name its package-local runnable target,
+   screens or tabs, controls, what appears before and after each action, launch
+   command, and the exact question it answers. The demo is not another selected
+   product.
 5. **Data mode:** label every playground screen as fixture, generated, real
    read-only, real write, or a deliberate choice between them. State the safe
    default. Never leave it unclear whether a demonstration is showing six fake
@@ -403,7 +477,7 @@ Every piece gets a short interface inventory containing:
    debug logs in a clearly secondary screen or disclosure. Name it, but do not
    let it substitute for the main input and output.
 
-A datastore package also needs a direct-observation inspector. Its primary interfaces
+A datastore package Isolation Demo includes a store inspector. Its primary interfaces
 are ordinary reads and writes such as `savePage`, `getRun`, `listClaims`,
 `savePlay`, or `listReviewQueue`. Its inspector should show the actual records,
 relationships, and write history in plain language. Real-data mode should
@@ -428,7 +502,7 @@ each alternative the same basic treatment:
 - an end-to-end example using one concrete record;
 - what the real user sees on the first screen;
 - the interface inventory and data mode for every piece;
-- what each package or store showcase proves by itself;
+- what each package Isolation Demo proves by itself;
 - the finished-picture walkthrough;
 - strengths, risks, and the reason someone might honestly choose it.
 
@@ -482,7 +556,7 @@ Each slice-up philosophy should include:
 - The exact app and package paths it creates.
 - The exact job and data ownership of every piece.
 - The short operations each customer calls and the data passed between them.
-- The direct-observation UI or UIs for each candidate product.
+- The package-local Isolation Demo for each candidate package.
 - The external events each product exposes to consumers.
 - The internal telemetry or debug logs each product makes visible.
 - The way the products assemble into the final application.
@@ -512,14 +586,14 @@ the founder actually needs them for the ordinary job.
 If these two walkthroughs cannot be told without switching meanings for a term
 or guessing which product owns a step, the slice is not coherent yet.
 
-### Direct observation proves one useful operation
+### Isolation Demos make each package operable
 
 Each lib and datastore package in a slice-up plan must include a concrete
-direct-observation UI package description. This is a test bench or store inspector for
-the founder or developer, not another production app and not a wall of internal
-machinery. A package screen should put a representative input on the left, the
-output on the right, and the reason for that output nearby. A store screen
-should make the saved records and their relationships browsable.
+package-local Isolation Demo description. It is a factory-floor test bench or
+store inspector for the founder or developer, not another product package and
+not a wall of internal machinery. A lib demo should put a representative input
+on the left, the output on the right, and the reason for that output nearby. A
+datastore demo should make saved records and their relationships browsable.
 
 For each main operation, answer the atomic question directly. Examples:
 
@@ -530,12 +604,14 @@ For each main operation, answer the atomic question directly. Examples:
 
 Fixtures are pieces of material pushed through the machine. They should make the
 operation repeatable, but fixture selection, event streams, schemas, and IDs
-must not become the apparent product. The showcase may expose deeper telemetry
+must not become the apparent product. The Isolation Demo may expose deeper telemetry
 behind a details control.
 
-The direct-observation UI standard belongs here, in the harness, so it can be carried to every project. Project-specific slice-up documents should apply this standard rather than redefining it.
+The Isolation Demo standard belongs here, in the harness, so it can be carried
+to every project. Project-specific slice-up documents should apply this standard
+rather than redefining it.
 
-For each direct-observation UI, describe:
+For each Isolation Demo, describe:
 
 - The concrete runtime and platform: iOS app, iPhone app, iPad app, web app, CLI TUI, desktop app, local web server, or another explicit target.
 - The project shape needed to run it: Xcode project, Swift package example app, app target inside a workspace, local web app package, command-line entry point, or other runnable form.
@@ -551,7 +627,12 @@ For each direct-observation UI, describe:
 - Internal telemetry: the logs that explain what the product did and why.
 - Walkthrough value: what a founder/developer should learn by operating this product directly.
 
-Do not leave the direct-observation UI as an abstract idea. A product spec should make it clear what the first implementation will actually be built as. For an iOS-first product, that usually means naming an iPhone-runnable SwiftUI app, Xcode target, or package example that can be installed on a simulator or physical iPhone. For a web-first product, that usually means naming the local web server, route, viewport assumptions, and framework. The details can change later, but the first spec must choose a concrete starting point so implementation agents can push back, estimate, and build.
+Do not leave the Isolation Demo as an abstract idea. A package spec should make
+it clear what the first package-local runnable target will be. For an iOS-first
+package, that usually means an iPhone-runnable SwiftUI example or Xcode target
+inside the package workspace. For a web-first package, that usually means a
+package-local demo entry point and launch command. The details can change later,
+but the first spec must choose a concrete starting point.
 
 Before presenting the plan, perform a plain-language pass:
 
@@ -648,7 +729,7 @@ Use these rules:
   contracts, but must not mark implementation work resolved.
 - Phase 06 equivalent: implement new packages and boundary changes in dependency
   order, leaving final app integration until the package surfaces compile and
-  their direct-observation UIs run. Phase 06 agents resolve specs only after the
+  their Isolation Demos run. Phase 06 agents resolve specs only after the
   implementation and validation are complete.
 - Phase 07 continues to handle feedback specs, rework, downstream request specs,
   and version-history notes after the re-architecture implementation begins.
@@ -681,7 +762,7 @@ During the migration:
   surfaces stabilize.
 - Old routes can remain behind debug flags or temporary navigation while the new
   package surfaces are proven.
-- Each migrated surface should have validation results from the package showcase
+- Each migrated surface should have validation results from the package Isolation Demo
   and from the final app integration.
 - When a producer package changes a contract, create downstream request specs for
   consumers instead of silently editing them in the same pass.
@@ -703,13 +784,14 @@ packages/
   datastore/
 ```
 
-Each runnable product or playground shell is an app workspace. Each reusable
-piece is a package workspace in the category that says what it owns.
+Each substantial runnable product is an app workspace. Each reusable piece is a
+package workspace in the category that says what it owns. Package-local
+Isolation Demo targets do not become app workspaces.
 
 Most internal packages should have two customers:
 
 1. The final production application that imports the package.
-2. A local developer/founder showcase that demonstrates the package independently.
+2. Its package-local Isolation Demo customer, which operates the package independently.
 
 The final production application usually has one primary customer: the end user. Its documentation should describe the real customer-facing product and how the internal packages are assembled to deliver it.
 
@@ -765,6 +847,12 @@ The `customers/` folder should start with placeholders. Each customer document s
 
 The scaffolding agent should create only a light placeholder. The product-spec phase fills the first section from the producer's perspective. The customer-request phase fills the second section from the consumer's perspective. The producer-response phase fills the third section and updates the package spec.
 
+Every package gets `customers/00-isolation-demo.md` in addition to documents for
+production consumers. The `00-` prefix keeps this required human customer first
+in directory listings. In Phase 04, its request is written from the perspective
+of a founder/developer operating the package alone. This customer document does
+not add a selected product, team, or Phase 03 agent.
+
 ## Plan Sub-Agent Orchestration
 
 After a slice-up direction is chosen and package documentation exists, create a root-level sub-agent plan for the repository. The plan should be a Markdown document, such as `SUBAGENTS.md`, that describes the phased automation strategy for the project.
@@ -784,7 +872,7 @@ The sub-agent plan should define numbered phases. The exact numbering can vary b
 3. Phase 03: A shell runner starts one product-spec agent per package to complete that package's spec and fill the top third of customer documents.
 4. Phase 04: A shell runner starts one customer-request agent per consumer-to-producer relationship to fill the middle third of customer documents.
 5. Phase 05: A shell runner starts one producer-response agent per package to fill the bottom third of customer documents and update specs.
-6. Phase 06: Implementation agents build each package's first minimum viable product, including its direct-observation UI.
+6. Phase 06: Implementation agents build each package's first minimum viable product, including its Isolation Demo.
 7. Phase 07: Iteration agents process unresolved timestamped feedback specs, package by package, with final application iteration last.
 8. Later phases: Run review, integration, status, and iteration phases until the packages assemble cleanly into the final application.
 
@@ -804,9 +892,13 @@ Each product-spec agent should read:
 - Its stub spec under `docs/specs/`.
 - Its placeholder customer documents under `customers/`.
 
-The agent should update only its own package documentation. It should expand the package spec to describe the product goals, boundaries, library surface, reusable UI bricks, direct-observation UI, customer assumptions, likely interfaces, validation plan, and first implementation checklist.
+The agent should update only its own package documentation. It should expand the package spec to describe the product goals, boundaries, library surface, Isolation Demo, customer assumptions, likely interfaces, validation plan, and first implementation checklist.
 
-The product spec must be specific about direct-observation UI implementation. It should name the runtime, device or viewport, orientation assumptions, project or target shape, and how a founder/developer will launch it. If the project is iOS-first, each direct-observation UI should explain whether it will be an iPhone-runnable app, SwiftUI preview/example, Xcode target, or another concrete iOS-runner shape.
+The package spec must be specific about Isolation Demo implementation. It should
+name the package-local runtime, device or viewport, project or target shape, and
+launch command. If the project is iOS-first, explain whether the demo is an
+iPhone-runnable example, SwiftUI example, Xcode target, or another package-local
+runner.
 
 During this phase, the package should fill the first section of each customer document with the producer's initial understanding of that customer. The later customer-request phase lets the consuming package write its own needs from its own perspective.
 
@@ -831,13 +923,13 @@ The agent should edit only the intended customer document unless the phase expli
 
 After customer requests exist, run producer-response agents from the perspective of each producing package. A producer-response agent reads the package's customer documents and writes a response section explaining how the package will meet each customer's needs.
 
-That response should become part of the package's planning surface. If the work is large, the agent should create or update a detailed spec under `docs/specs/` with goals, interfaces, direct-observation UI details, implementation checklist, and validation steps.
+That response should become part of the package's planning surface. If the work is large, the agent should create or update a detailed spec under `docs/specs/` with goals, interfaces, Isolation Demo details, implementation checklist, and validation steps.
 
 Later implementation agents can then build the package's first minimum viable product from those specs. The minimum viable product should include:
 
 - The package's core library or reusable product behavior.
 - Any reusable UI screens or bricks promised to customers.
-- The local direct-observation UI that proves the product by itself.
+- The package-local Isolation Demo that proves the package by itself.
 - Event feeds, telemetry logs, and status views needed to inspect the product.
 - Enough tests or validation steps to know the package works for its initial customer requests.
 
@@ -976,17 +1068,22 @@ suggest a downstream request spec for that receiving product.
 
 ## Build Multi-Use Packages
 
-Most internal behavior should live under `packages/lib/`, reusable screens under
-`packages/ui/`, and durable authorities under `packages/datastore/`. A package
+Most internal behavior should live under `packages/lib/` and durable authorities
+under `packages/datastore/`. Ordinary product screens stay in the selected app,
+while each package keeps its own Isolation Demo. Use `packages/ui/` only for a major,
+independently valuable UI system explicitly selected in the slice-up. A package
 should normally have at least two use cases:
 
 1. It can be imported into the final application or another package.
-2. Its interface can be exercised through `apps/package-playgrounds`, usually
-   by a matching UI package.
+2. Its interfaces can be exercised directly through its package-local Isolation
+   Demo customer.
 
-The showcase product is both a marketing tool and a debugging tool. It lets us operate that part of the system on its own, without requiring the whole final application to exist.
+The Isolation Demo is both a demonstration and debugging tool. It lets us
+operate that package on its own without requiring the final application.
 
-The showcase does not need to become a long-term customer-facing product. Its value is that we can walk around with it, play with it, try different inputs, inspect its behavior, and prove that the package is valuable by itself.
+The Isolation Demo is not a separate customer-facing product or team. Its value
+is that we can play with every package interface, try different inputs, inspect
+behavior, and prove the package independently.
 
 ## Design Each Piece As A Demonstrable Product
 
@@ -996,16 +1093,18 @@ When the architect breaks down the founder vision, each product should be define
 - The input it accepts.
 - The output it produces.
 - The events or signals it emits.
-- The behavior its showcase UI should make visible.
-- The direct-observation UI or UIs needed to operate and inspect it locally.
+- The behavior its Isolation Demo should make visible.
+- The package-local runnable target used to operate and inspect it.
 - The boundaries it does not cross.
 - The way it can be used by another package or final application.
 
-The showcase should expose the bells and whistles that would normally be hidden inside the final application: the internal state, the intelligent controls, the transformations, the emitted events, and the decisions being made.
+The Isolation Demo should expose what would normally be hidden inside the final
+application: internal state, intelligent controls, transformations, emitted
+events, and decisions.
 
 This makes every package easier to debug, easier to explain, and easier to validate before it is integrated into the larger system.
 
-For most internal products, the local showcase should include:
+For most packages, the Isolation Demo should include:
 
 - An operator panel for feeding inputs, changing modes, and triggering actions.
 - A primary product view or reusable UI brick when the package owns visual behavior.
@@ -1026,7 +1125,8 @@ That vision can be broken into separate products:
 
 This package captures an incoming audio stream, splits it into raw chunks, stores or hands off those chunks, and broadcasts that new chunks are available.
 
-Its showcase UI might let someone start recording, watch chunks appear in real time, inspect chunk metadata, and see chunk-ready events as they fire.
+Its Isolation Demo might let someone start recording, watch chunks appear in
+real time, inspect chunk metadata, and see chunk-ready events as they fire.
 
 It does not need to solve transcription, silence detection, final persistence, or the full user experience.
 
@@ -1034,7 +1134,8 @@ It does not need to solve transcription, silence detection, final persistence, o
 
 This package consumes audio chunks, whether from the real recorder package or from simulated test inputs. It analyzes volume levels, identifies quiet regions, and suggests good places to cut audio with minimal impact.
 
-Its showcase UI might visualize waveform volume, mark quiet sections, and show candidate cut points as chunks arrive.
+Its Isolation Demo might visualize waveform volume, mark quiet sections, and
+show candidate cut points as chunks arrive.
 
 It does not need to know how audio was recorded or how final snippets will be stored.
 
@@ -1042,7 +1143,9 @@ It does not need to know how audio was recorded or how final snippets will be st
 
 This package takes selected audio snippets or concatenated audio segments, sends them to a transcription service, and stores or returns transcription output.
 
-Its showcase UI might accept an audio file or generated snippet, call the transcription workflow, and display the resulting transcript and processing status.
+Its Isolation Demo might accept an audio file or generated snippet, call the
+transcription workflow, and display the resulting transcript and processing
+status.
 
 It does not need to manage recording or decide where silence occurs.
 
@@ -1050,7 +1153,9 @@ It does not need to manage recording or decide where silence occurs.
 
 Once the independent products work, the final application imports them and wires them together. It provides the durable persistence, user-facing interface, navigation, storage model, and final experience.
 
-The earlier products do not need full production persistence in their showcases. They can use in-memory or dummy persistence when that is enough to prove their own behavior.
+The packages do not need full production persistence in their Isolation Demos.
+They can use in-memory or dummy persistence when that is enough to prove their
+own behavior.
 
 ## Working Sequence
 
@@ -1065,7 +1170,7 @@ At a high level:
 5. Product-specific agents complete specs and the producer-understanding sections of customer documents.
 6. Relationship-specific agents write customer requests.
 7. Producer-specific agents respond to customer requests and update specs.
-8. Implementation agents build package MVPs and direct-observation UIs in isolated worktrees where possible.
+8. Implementation agents build package MVPs and package-local Isolation Demos in isolated worktrees where possible.
 9. Human and AI review, integrate, and iterate until the final application is assembled.
 
 ## Guiding Principle

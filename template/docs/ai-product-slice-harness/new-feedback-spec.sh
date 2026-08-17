@@ -7,7 +7,7 @@ TITLE="${2:-}"
 
 if [[ -z "$PRODUCT_PATH" || -z "$TITLE" ]]; then
   echo "Usage: $0 <product-path> <feedback-title>"
-  echo "Example: $0 packages/example-product \"Improve showcase controls\""
+  echo "Example: $0 packages/example-product \"Improve Isolation Demo controls\""
   echo "Then write feedback details into the created spec."
   exit 2
 fi

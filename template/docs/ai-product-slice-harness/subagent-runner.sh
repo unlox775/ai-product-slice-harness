@@ -53,6 +53,10 @@ enqueue_customer_request_agent() {
   HARNESS_JOBS+=("customer_request|$1|$2|$3")
 }
 
+enqueue_isolation_demo_request_agent() {
+  HARNESS_JOBS+=("isolation_demo_request|$1")
+}
+
 enqueue_producer_response_agent() {
   HARNESS_JOBS+=("producer_response|$1")
 }
@@ -243,6 +247,9 @@ _run_harness_job() {
       IFS="|" read -r consumer_path producer_path customer_file <<<"$rest"
       _run_customer_request_agent "$consumer_path" "$producer_path" "$customer_file"
       ;;
+    isolation_demo_request)
+      _run_isolation_demo_request_agent "$rest"
+      ;;
     producer_response)
       _run_producer_response_agent "$rest"
       ;;
@@ -268,6 +275,9 @@ _job_run_label() {
   case "$kind" in
     product_spec|producer_response|first_implementation|iteration_specs)
       basename "$rest"
+      ;;
+    isolation_demo_request)
+      printf '%s-isolation-demo' "$(basename "$rest")"
       ;;
     customer_request)
       IFS="|" read -r consumer_path producer_path customer_file <<<"$rest"
@@ -460,18 +470,19 @@ Your job:
 1. Expand or revise the product specs under ${product_path}/docs/specs/ into complete workable specs.
 2. Use the short names and plain-language jobs from the slice-up plan. Define any unavoidable specialist term the first time it appears.
 3. State whether this product lives under apps/, packages/ui/, packages/lib/, or packages/datastore/. Apps are runnable; UI packages own reusable screens; lib packages own behavior; datastore packages own durable data. Name the durable data it owns, or say explicitly that it owns none.
-4. For every main operation, name a concrete input, action, and output. Prefer simple function-level language such as "findPlayLinks(listingPage) returns play URLs" over broad abstractions.
-5. Include an interface inventory. For each callable interface, state the caller, input, output, store read or changed, and failure result.
-6. Name every normal product screen and every direct-observation screen or tab. For each, list what appears there, the main controls, what changes after the main action, and the exact question the screen answers.
-7. Label the data mode of every direct-observation screen as fixture, generated, real read-only, real write, or a deliberate switch between modes. State the safe default and make real versus sample data visually unmistakable.
-8. If this is a data store, define its small read/write interface and a record inspector UI. Real-data inspection should default to read-only; test writes should use a clearly marked sandbox unless the product spec requires an approved mutation path.
-9. Include product goals, boundaries, library or UI surface, customer assumptions, event and telemetry expectations, validation steps, and first implementation checklist.
-10. Make every direct-observation UI concrete: name the runtime, device or viewport, orientation assumptions, project or target shape, and how a founder/developer launches it. Center the UI on the useful package input and output; keep fixtures and internal IDs secondary.
-11. If this project is iOS-first, specify whether each direct-observation UI is an iPhone-runnable app, SwiftUI showcase, Xcode target, Swift package example, or another concrete iOS runner.
-12. Fill the top third of each customer document inside ${product_path}/customers/ with this product producer-side understanding of that customer.
-13. Leave the customer-request and producer-response sections as TODO placeholders for later phases.
-14. Do not edit files outside ${product_path}.
-15. Before finishing, write your phase result to this file: __HARNESS_RESULT_FILE__
+4. Do not invent another product or UI package. The generated product list must match the selected slice-up headings exactly. Every package must instead own exactly one package-local Isolation Demo: a separately launchable factory-floor UI for exercising that package without the production app. The Isolation Demo is a customer and runnable target inside the package, not another product or phase agent.
+5. For every main operation, name a concrete input, action, and output. Prefer simple function-level language such as "findPlayLinks(listingPage) returns play URLs" over broad abstractions.
+6. Include an interface inventory. For each callable interface, state the caller, input, output, store read or changed, and failure result.
+7. Name every normal product screen and every Isolation Demo screen or tab. For each, list what appears there, the main controls, what changes after the main action, and the exact question the screen answers.
+8. Label the data mode of every Isolation Demo screen as fixture, generated, real read-only, real write, or a deliberate switch between modes. State the safe default and make real versus sample data visually unmistakable.
+9. If this is a data store, define its small read/write interface and a record inspector UI. Real-data inspection should default to read-only; test writes should use a clearly marked sandbox unless the product spec requires an approved mutation path.
+10. Include product goals, boundaries, library or UI surface, customer assumptions, event and telemetry expectations, validation steps, and first implementation checklist.
+11. Make every Isolation Demo concrete: name the runtime, device or viewport, orientation assumptions, project or target shape, and the package-local launch command. Center it on the useful package input and output; keep fixtures and internal IDs secondary.
+12. If this project is iOS-first, specify whether each Isolation Demo is an iPhone-runnable app, SwiftUI example, Xcode target, or another concrete package-local runner.
+13. Fill the top third of each customer document inside ${product_path}/customers/ with this product producer-side understanding of that customer.
+14. Leave the customer-request and producer-response sections as TODO placeholders for later phases.
+15. Do not edit files outside ${product_path}.
+16. Before finishing, write your phase result to this file: __HARNESS_RESULT_FILE__
 
 Result file format:
 STATUS: succeeded|blocked|failed
@@ -531,6 +542,48 @@ PROMPT
   _run_codex_agent "${consumer_name}-uses-${producer_name}" "${consumer_path} -> ${producer_path}" "$prompt"
 }
 
+_run_isolation_demo_request_agent() {
+  local product_path="$1"
+  local product_name prompt
+  product_name="$(basename "$product_path")"
+
+  prompt="$(cat <<PROMPT
+You are the Phase 04 Isolation Demo customer-request agent for ${product_path}.
+
+Read:
+- ${HARNESS_PROCESS_DOC}
+- ${HARNESS_FOUNDER_VISION}
+- ${HARNESS_SLICE_UP_PLAN}
+- SUBAGENTS.md
+- ${product_path}/README.md
+- ${product_path}/docs/specs/*.md
+- ${product_path}/customers/00-isolation-demo.md
+
+The Isolation Demo is the standing founder/developer customer for this package.
+It must operate the package by itself, without launching or depending on the
+production app. It is package-local and is not another product package.
+
+Your job:
+1. Work from the perspective of a founder/developer operating ${product_path} alone.
+2. Fill only the Middle Third: Customer Request section in ${product_path}/customers/00-isolation-demo.md.
+3. Request a concrete package-local runnable UI that exposes every primary interface with representative inputs, outputs, intermediate state, failures, and explanations.
+4. Name the launch command, runtime, screens or tabs, controls, fixture/generated/real modes, safe defaults, reset behavior, failure simulations, event feed, and secondary diagnostics.
+5. Require the demo to use the same public interfaces promised to production customers. It must not reimplement package behavior or require the production app.
+6. Keep this proportional to the package. The Isolation Demo proves the package factory floor; it is not another product team.
+7. Do not edit any other files.
+8. Before finishing, write your phase result to this file: __HARNESS_RESULT_FILE__
+
+Result file format:
+STATUS: succeeded|blocked|failed
+SUMMARY: <one-line summary>
+DETAILS:
+<details, especially if blocked or failed>
+PROMPT
+)"
+
+  _run_codex_agent "${product_name}-isolation-demo" "${product_path} -> isolation demo" "$prompt"
+}
+
 _run_producer_response_agent() {
   local producer_path="$1"
   local producer_name prompt
@@ -588,7 +641,7 @@ Read:
 
 Your job:
 1. Build the first minimum viable product for ${product_path} from its completed spec and customer documents.
-2. Include the package core behavior, promised library or UI surface, direct-observation UI, event feed, telemetry/debug views, and validation steps described in the spec.
+2. Include the package core behavior, promised library or UI surface, package-local Isolation Demo, event feed, telemetry/debug views, and validation steps described in the spec.
 3. Work only inside ${product_path} unless the spec explicitly requires a scoped integration edit.
 4. Do not edit unrelated packages.
 5. Before finishing, write your phase result to this file: __HARNESS_RESULT_FILE__

@@ -74,7 +74,7 @@ if [[ "$RA_REMAINING_COUNT" != "0" ]]; then
   exit 2
 fi
 
-require_phase_ready "Re-architecture implementation has succeeded. Completion is gated so the human can validate the app/showcases before the main docs are reconciled and the plan is marked succeeded."
+require_phase_ready "Re-architecture implementation has succeeded. Completion is gated so the human can validate the app and package Isolation Demos before the main docs are reconciled and the plan is marked succeeded."
 
 prompt="$(cat <<PROMPT
 You are the re-architecture completion agent for ${REARCH_PLAN_RELATIVE}.
