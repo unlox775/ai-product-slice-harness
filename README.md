@@ -157,8 +157,84 @@ bash subagents/new-feedback.sh packages/your-product "Short feedback title"
 ## Requirements
 
 - **Phase 01–02:** any capable IDE coding agent (Cursor, etc.).
-- **Phase 03+ shell fan-out:** [Codex CLI](https://github.com/openai/codex) (`codex` on `PATH`). The runner invokes `codex exec` with a workspace-write sandbox by default.
-- **macOS-friendly watchers** and optional iOS `CODEX_ADD_DIRS` when you pass `--ios-sandbox` to the phase-script generator.
+- **Phase 03+ shell fan-out:** one of:
+  - **Codex (default):** [Codex CLI](https://github.com/openai/codex) (`codex` on `PATH`). The runner invokes `codex exec` with a workspace-write sandbox and waits in a local worktree.
+  - **Cursor Cloud Agents:** `CURSOR_API_KEY` plus `HARNESS_AGENT_PROVIDER=cursor`. The runner launches remote agents via `POST https://api.cursor.com/v0/agents` and does **not** call `codex`.
+- **macOS-friendly watchers** and optional iOS `CODEX_ADD_DIRS` when you pass `--ios-sandbox` to the phase-script generator (Codex / local path only).
+- **python3** and, for the Cursor provider, **curl**.
+
+---
+
+## Agent providers (Codex vs Cursor)
+
+`make phase-3` / `phase-4` / … is the same UX for both providers. Choose the runtime with an environment variable or `docs/ai-product-slice-harness/config.env`:
+
+```sh
+HARNESS_AGENT_PROVIDER=codex    # default — local worktree, waits for each agent
+HARNESS_AGENT_PROVIDER=cursor   # Cursor Cloud Agents API
+```
+
+The process environment overrides `config.env`.
+
+### Codex (default, backward compatible)
+
+Unchanged: each job runs `codex exec` against this checkout, waits, then writes `succeeded` / `blocked` / `failed` from the local result file. `make phase-2-5` / `phase-3-5` can still commit after each round because the files are already in the worktree.
+
+### Cursor Cloud Agents
+
+Cursor agents **do not edit this local worktree**. They clone the GitHub repo, push a `cursor/…` branch, and (by default) open a PR (`autoCreatePr: true`). Status files still land under `subagents/status/` so `make watch` and `make status` keep working.
+
+**Grok Bot / operator recipe**
+
+```sh
+export HARNESS_AGENT_PROVIDER=cursor
+export CURSOR_API_KEY=...          # Cloud Agents key; never commit this
+# optional:
+# export HARNESS_CURSOR_REPO=https://github.com/org/your-product
+# export HARNESS_CURSOR_REF=main
+# export HARNESS_CURSOR_MODEL=default   # account/team default; do not hardcode a paid model
+# export HARNESS_CURSOR_WAIT=0          # default: fire-and-forget after launch
+# export HARNESS_CURSOR_DRY_RUN=1       # write payload + fake agent_id; no API, no Codex
+
+make watch                         # leave open
+make phase-3                       # launches every Phase 03 job, records agent_id: bc-…
+make cursor-status                 # refresh running jobs from the API
+# review / merge each PR, then:
+git pull
+make phase-4
+```
+
+Helpers (also installed into projects):
+
+```sh
+bash docs/ai-product-slice-harness/cursor-agent-launch.sh --prompt-file prompt.txt --label demo
+bash docs/ai-product-slice-harness/cursor-agent-status.sh
+make cursor-wait                   # poll until known Cursor jobs are terminal
+```
+
+**Wait modes**
+
+| `HARNESS_CURSOR_WAIT` | Phase script behavior |
+| ---: | --- |
+| `0` (default) | Launch every enqueued job (parallel enqueue still fans out). Treat HTTP launch success as the shell job succeeding; leave status `running` plus `agent_id`. |
+| `1` | After launch, poll `GET /v0/agents/{id}` until a terminal API state, then write `succeeded` or `failed`. |
+
+Even with `WAIT=1`, the files are on the remote PR. `make phase-2-5` / `phase-3-5` **stop after launching the first Cursor planning round** and print merge / `git pull` / next `make phase-*` instructions. `require_phase_successes` still requires a first-line `succeeded`, so later phases will not start while jobs are `running`.
+
+**Cursor env vars**
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `CURSOR_API_KEY` | (required) | Basic auth username; password empty |
+| `HARNESS_CURSOR_REPO` | `git remote get-url origin` | GitHub HTTPS URL |
+| `HARNESS_CURSOR_REF` | current branch, else `main` | Source ref |
+| `HARNESS_CURSOR_MODEL` | `default` | API `model` field; omit-style default, not a specific paid id |
+| `HARNESS_CURSOR_AUTO_CREATE_PR` | `1` | `target.autoCreatePr` |
+| `HARNESS_CURSOR_DRY_RUN` | `0` | Fake `bc-dry-run-…` id; never calls Codex or the API. The harness repo’s `tests/provider-switch.sh` covers this path plus a local mock of `POST /v0/agents`. |
+| `HARNESS_CURSOR_API_BASE` | `https://api.cursor.com` | Override for tests |
+| `HARNESS_CURSOR_POLL_SECONDS` | `15` | Poll interval when waiting |
+| `HARNESS_CURSOR_WAIT_TIMEOUT` | `0` | Seconds; `0` means no limit |
+| `HARNESS_CURSOR_BRANCH_NAME` | (unset) | Optional `target.branchName` |
 
 ---
 
@@ -190,3 +266,5 @@ That repo still uses an earlier on-disk naming (`docs/STANDARD-project-harness.m
 ## Status
 
 Working extraction of the process and runner that grew up inside Timelens. Install, configure, scaffold phase scripts, and run the phased build.
+
+Phase 03+ shell fan-out now dispatches on `HARNESS_AGENT_PROVIDER` (`codex` default, or `cursor` for Cloud Agents). Codex behavior is unchanged.

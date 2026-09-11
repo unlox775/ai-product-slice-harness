@@ -40,6 +40,7 @@ fi
 total="${#status_files[@]}"
 queued=0
 running=0
+launched=0
 succeeded=0
 blocked=0
 failed=0
@@ -49,6 +50,7 @@ for status_file in "${status_files[@]}"; do
   case "$status" in
     queued) queued=$((queued + 1)) ;;
     running) running=$((running + 1)) ;;
+    launched) launched=$((launched + 1)) ;;
     succeeded) succeeded=$((succeeded + 1)) ;;
     blocked) blocked=$((blocked + 1)) ;;
     failed) failed=$((failed + 1)) ;;
@@ -56,9 +58,9 @@ for status_file in "${status_files[@]}"; do
 done
 
 if [[ -n "$RUN_ID" ]]; then
-  printf '%s run=%s: total=%s queued=%s running=%s succeeded=%s blocked=%s failed=%s\n' "$PHASE" "$RUN_ID" "$total" "$queued" "$running" "$succeeded" "$blocked" "$failed"
+  printf '%s run=%s: total=%s queued=%s running=%s launched=%s succeeded=%s blocked=%s failed=%s\n' "$PHASE" "$RUN_ID" "$total" "$queued" "$running" "$launched" "$succeeded" "$blocked" "$failed"
 else
-  printf '%s: total=%s queued=%s running=%s succeeded=%s blocked=%s failed=%s\n' "$PHASE" "$total" "$queued" "$running" "$succeeded" "$blocked" "$failed"
+  printf '%s: total=%s queued=%s running=%s launched=%s succeeded=%s blocked=%s failed=%s\n' "$PHASE" "$total" "$queued" "$running" "$launched" "$succeeded" "$blocked" "$failed"
 fi
 echo
 
@@ -100,5 +102,12 @@ for status_file in "${status_files[@]}"; do
       printf '           %s\n' "$result_line"
     fi
     printf '           label: %s\n' "$label"
+    extra="$(sed -n '6,20p' "$status_file")"
+    if [[ -n "$extra" ]]; then
+      while IFS= read -r extra_line; do
+        [[ -z "$extra_line" ]] && continue
+        printf '           %s\n' "$extra_line"
+      done <<<"$extra"
+    fi
   fi
 done

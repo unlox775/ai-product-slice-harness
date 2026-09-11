@@ -203,7 +203,7 @@ DETAILS:
 PROMPT
 )"
 
-  _run_codex_agent "$run_label" "$product_path / $relative_spec" "$prompt"
+  _run_agent "$run_label" "$product_path / $relative_spec" "$prompt"
 }
 
 ra_process_product() {

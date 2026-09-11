@@ -187,7 +187,9 @@ Next steps (Phase 01)
 
 Requirements
 ------------
-Phase 03+ shell fan-out currently invokes the Codex CLI (\`codex\`).
+Phase 03+ shell fan-out defaults to the Codex CLI (\`codex\`).
+Set HARNESS_AGENT_PROVIDER=cursor and CURSOR_API_KEY to launch
+Cursor Cloud Agents instead (remote branch/PR, not this worktree).
 Phase 01–02 are conversational IDE-agent work.
 
 Demo of this harness in a real project:

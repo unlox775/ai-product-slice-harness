@@ -6,15 +6,38 @@
 HARNESS_HELPER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HARNESS_ROOT_DIR="$(cd "$HARNESS_HELPER_DIR/../.." && pwd)"
 
+# Process-environment values win over config.env for the provider switch.
+_HARNESS_PRE_PROVIDER="${HARNESS_AGENT_PROVIDER-}"
+_HARNESS_PRE_CURSOR_REPO="${HARNESS_CURSOR_REPO-}"
+_HARNESS_PRE_CURSOR_REF="${HARNESS_CURSOR_REF-}"
+_HARNESS_PRE_CURSOR_MODEL="${HARNESS_CURSOR_MODEL-}"
+_HARNESS_PRE_CURSOR_WAIT="${HARNESS_CURSOR_WAIT-}"
+_HARNESS_PRE_CURSOR_DRY_RUN="${HARNESS_CURSOR_DRY_RUN-}"
+_HARNESS_PRE_CURSOR_AUTO_CREATE_PR="${HARNESS_CURSOR_AUTO_CREATE_PR-}"
+_HARNESS_PRE_CURSOR_API_BASE="${HARNESS_CURSOR_API_BASE-}"
+
 # Optional project config written by bin/install or Phase 01.
 # shellcheck source=/dev/null
 if [[ -f "$HARNESS_HELPER_DIR/config.env" ]]; then
   source "$HARNESS_HELPER_DIR/config.env"
 fi
 
+[[ -n "${_HARNESS_PRE_PROVIDER}" ]] && HARNESS_AGENT_PROVIDER="$_HARNESS_PRE_PROVIDER"
+[[ -n "${_HARNESS_PRE_CURSOR_REPO}" ]] && HARNESS_CURSOR_REPO="$_HARNESS_PRE_CURSOR_REPO"
+[[ -n "${_HARNESS_PRE_CURSOR_REF}" ]] && HARNESS_CURSOR_REF="$_HARNESS_PRE_CURSOR_REF"
+[[ -n "${_HARNESS_PRE_CURSOR_MODEL}" ]] && HARNESS_CURSOR_MODEL="$_HARNESS_PRE_CURSOR_MODEL"
+[[ -n "${_HARNESS_PRE_CURSOR_WAIT}" ]] && HARNESS_CURSOR_WAIT="$_HARNESS_PRE_CURSOR_WAIT"
+[[ -n "${_HARNESS_PRE_CURSOR_DRY_RUN}" ]] && HARNESS_CURSOR_DRY_RUN="$_HARNESS_PRE_CURSOR_DRY_RUN"
+[[ -n "${_HARNESS_PRE_CURSOR_AUTO_CREATE_PR}" ]] && HARNESS_CURSOR_AUTO_CREATE_PR="$_HARNESS_PRE_CURSOR_AUTO_CREATE_PR"
+[[ -n "${_HARNESS_PRE_CURSOR_API_BASE}" ]] && HARNESS_CURSOR_API_BASE="$_HARNESS_PRE_CURSOR_API_BASE"
+
 HARNESS_PROCESS_DOC="${HARNESS_PROCESS_DOC:-docs/AI-PRODUCT-SLICE-HARNESS.md}"
 HARNESS_FOUNDER_VISION="${HARNESS_FOUNDER_VISION:-docs/FOUNDER-vision.md}"
 HARNESS_SLICE_UP_PLAN="${HARNESS_SLICE_UP_PLAN:-docs/SLICE-UP-plan.md}"
+HARNESS_AGENT_PROVIDER="${HARNESS_AGENT_PROVIDER:-codex}"
+
+# shellcheck source=/dev/null
+source "$HARNESS_HELPER_DIR/cursor-agent-provider.sh"
 
 HARNESS_CODEX_BIN="${CODEX_BIN:-codex}"
 HARNESS_CODEX_SANDBOX="${CODEX_SANDBOX_MODE:-${CODEX_SANDBOX:-workspace-write}}"
@@ -94,7 +117,7 @@ run_enqueued_agents_in_parallel() {
     done
   fi
 
-  echo "$HARNESS_PHASE complete. Status files are in $HARNESS_STATUS_DIR."
+  _print_phase_completion
   return "$failed"
 }
 
@@ -102,6 +125,23 @@ _print_phase_watch_command() {
   echo "Persistent watcher (safe to start once and leave open):"
   echo "  make watch"
   echo
+}
+
+_print_phase_completion() {
+  if [[ "$(_harness_agent_provider)" == "cursor" ]]; then
+    if _cursor_wait_enabled; then
+      echo "$HARNESS_PHASE complete. Status files are in $HARNESS_STATUS_DIR."
+    else
+      echo "$HARNESS_PHASE launched on Cursor Cloud Agents."
+      echo "Those agents edit a remote branch/PR, not this local worktree."
+      echo "Agent ids are in $HARNESS_STATUS_DIR. Monitor with:"
+      echo "  make watch"
+      echo "  make cursor-status"
+    fi
+    echo "Merge each PR, git pull, then run the next phase."
+    return
+  fi
+  echo "$HARNESS_PHASE complete. Status files are in $HARNESS_STATUS_DIR."
 }
 
 run_enqueued_agents_one_at_a_time() {
@@ -118,7 +158,7 @@ run_enqueued_agents_one_at_a_time() {
     fi
   done
 
-  echo "$HARNESS_PHASE complete. Status files are in $HARNESS_STATUS_DIR."
+  _print_phase_completion
   return "$failed"
 }
 
@@ -301,6 +341,23 @@ _should_run_job() {
   case ",$HARNESS_ONLY," in
     *",$label,"*) return 0 ;;
     *) return 1 ;;
+  esac
+}
+
+_run_agent() {
+  local provider
+  provider="$(_harness_agent_provider)"
+  case "$provider" in
+    cursor)
+      _run_cursor_agent "$@"
+      ;;
+    codex|"")
+      _run_codex_agent "$@"
+      ;;
+    *)
+      echo "Unknown HARNESS_AGENT_PROVIDER='$HARNESS_AGENT_PROVIDER' (use codex or cursor)." >&2
+      return 1
+      ;;
   esac
 }
 
@@ -492,7 +549,7 @@ DETAILS:
 PROMPT
 )"
 
-  _run_codex_agent "$product_name" "$product_path" "$prompt"
+  _run_agent "$product_name" "$product_path" "$prompt"
 }
 
 _run_customer_request_agent() {
@@ -539,7 +596,7 @@ DETAILS:
 PROMPT
 )"
 
-  _run_codex_agent "${consumer_name}-uses-${producer_name}" "${consumer_path} -> ${producer_path}" "$prompt"
+  _run_agent "${consumer_name}-uses-${producer_name}" "${consumer_path} -> ${producer_path}" "$prompt"
 }
 
 _run_isolation_demo_request_agent() {
@@ -581,7 +638,7 @@ DETAILS:
 PROMPT
 )"
 
-  _run_codex_agent "${product_name}-isolation-demo" "${product_path} -> isolation demo" "$prompt"
+  _run_agent "${product_name}-isolation-demo" "${product_path} -> isolation demo" "$prompt"
 }
 
 _run_producer_response_agent() {
@@ -618,7 +675,7 @@ DETAILS:
 PROMPT
 )"
 
-  _run_codex_agent "$producer_name" "$producer_path" "$prompt"
+  _run_agent "$producer_name" "$producer_path" "$prompt"
 }
 
 _run_first_implementation_agent() {
@@ -654,7 +711,7 @@ DETAILS:
 PROMPT
 )"
 
-  _run_codex_agent "$product_name" "$product_path" "$prompt"
+  _run_agent "$product_name" "$product_path" "$prompt"
 }
 
 _run_iteration_specs_for_product() {
@@ -924,5 +981,5 @@ DETAILS:
 PROMPT
 )"
 
-  _run_codex_agent "$run_label" "$product_path / ${relative_spec}" "$prompt"
+  _run_agent "$run_label" "$product_path / ${relative_spec}" "$prompt"
 }
