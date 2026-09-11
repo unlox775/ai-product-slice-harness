@@ -100,7 +100,10 @@ worktree.
 
 ### Phase 03: Product Specs
 
-Phase 03 is the first shell-run background-agent phase.
+Phase 03 is the first shell-run background-agent phase. The same `make phase-3`
+command dispatches to Codex (default, local worktree) or Cursor Cloud Agents
+(`HARNESS_AGENT_PROVIDER=cursor`, remote branch/PR). See **Shell Scripts And
+Runner** for the provider switch.
 
 Human:
 
@@ -949,7 +952,24 @@ Write your customer request into <producer-package>/customers/<consumer-package>
 Edit only that customer document.
 ```
 
-The project may choose the agent runtime. If the project uses Codex, the scripts should invoke Codex with the phase prompt, wait for completion, write logs, then move to the next relationship.
+The project may choose the agent runtime with `HARNESS_AGENT_PROVIDER`
+(`codex` or `cursor`; default `codex`).
+
+If the project uses Codex, the scripts invoke Codex with the phase prompt, wait
+for completion, write logs, then move to the next relationship. Codex edits the
+local worktree.
+
+If the project uses Cursor (`HARNESS_AGENT_PROVIDER=cursor`), the scripts launch
+Cursor Cloud Agents through `POST https://api.cursor.com/v0/agents` using
+`CURSOR_API_KEY` as Basic-auth username. Those agents edit a remote branch and
+pull request, not the local worktree. Default `HARNESS_CURSOR_WAIT=0` is
+fire-and-forget: launch success leaves status `running` plus `agent_id` so
+`make watch`, `make cursor-status`, and a human or Grok Bot can monitor and
+merge. `HARNESS_CURSOR_WAIT=1` polls until the API reports a terminal state.
+Combined planning commands (`make phase-2-5` / `phase-3-5`) stop after launching
+a Cursor round; merge the PRs and `git pull` before the next phase. Use
+`HARNESS_CURSOR_DRY_RUN=1` to exercise the Cursor path without calling the API
+or Codex. Do not commit `CURSOR_API_KEY`.
 
 When implementation or iteration agents need Xcode or SwiftPM, the runner should allow project-controlled Codex sandbox settings. Keep `workspace-write` as the default sandbox, but allow the phase script or human to set:
 

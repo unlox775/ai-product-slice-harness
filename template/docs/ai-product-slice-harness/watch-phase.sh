@@ -89,7 +89,7 @@ status_color() {
 
   case "$status" in
     queued) printf '%s' "$CYAN" ;;
-    running) printf '%s' "$BLUE" ;;
+    running|launched) printf '%s' "$BLUE" ;;
     succeeded) printf '%s' "$GREEN" ;;
     blocked|failed) printf '%s' "$RED" ;;
     *) printf '%s' "$CYAN" ;;

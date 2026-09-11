@@ -17,7 +17,7 @@ else
 REARCH_ENV = REARCH_ID="$(REARCH_ID)"
 endif
 
-.PHONY: help harness-help phase-2-5 phase-3-5 phase-3 phase-4 phase-5 phase-6 phase-7 phase-7-serial phase-7-dry-run phase-7-notes phase-ra-3 phase-ra-4 phase-ra-5 phase-ra-6 phase-ra-complete phase-ra-abandon watch status
+.PHONY: help harness-help phase-2-5 phase-3-5 phase-3 phase-4 phase-5 phase-6 phase-7 phase-7-serial phase-7-dry-run phase-7-notes phase-ra-3 phase-ra-4 phase-ra-5 phase-ra-6 phase-ra-complete phase-ra-abandon watch status cursor-status cursor-wait
 
 help harness-help:
 	@echo "AI Product Slice Harness targets:"
@@ -39,8 +39,11 @@ help harness-help:
 	@echo "  make watch PHASE=phase-06-first-implementation"
 	@echo "                                       Keep watching one named phase"
 	@echo "  make status                          Show latest run status for PHASE=$(PHASE)"
+	@echo "  make cursor-status                    Refresh Cursor Cloud Agent status files"
+	@echo "  make cursor-wait                      Poll Cursor jobs until they finish"
 	@echo ""
-	@echo "Variables: PHASE, RUN_ID, REARCH_ID, LINES, INTERVAL, ARGS, PHASE_ONLY, HARNESS_COMMIT_DIRTY"
+	@echo "Variables: PHASE, RUN_ID, REARCH_ID, LINES, INTERVAL, ARGS, PHASE_ONLY, HARNESS_COMMIT_DIRTY,"
+	@echo "           HARNESS_AGENT_PROVIDER=codex|cursor, HARNESS_CURSOR_WAIT, HARNESS_CURSOR_DRY_RUN"
 
 phase-2-5:
 	bash docs/ai-product-slice-harness/run-planning-phases.sh phase-2-5 "$(ARGS)"
@@ -96,6 +99,12 @@ phase-ra-abandon:
 
 watch:
 	$(RUN_ENV) bash docs/ai-product-slice-harness/watch-phase.sh "$(PHASE)" "$(LINES)" "$(INTERVAL)"
+
+cursor-status:
+	bash docs/ai-product-slice-harness/cursor-agent-status.sh
+
+cursor-wait:
+	bash docs/ai-product-slice-harness/cursor-agent-status.sh --wait
 
 status:
 	@if [ "$(PHASE)" = "auto" ] && [ -f "subagents/status/current-phase" ]; then \

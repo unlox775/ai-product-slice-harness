@@ -108,7 +108,7 @@ DETAILS:
 PROMPT
 )"
 
-_run_codex_agent "documentation-reconcile" "$REARCH_PLAN_RELATIVE" "$prompt"
+_run_agent "documentation-reconcile" "$REARCH_PLAN_RELATIVE" "$prompt"
 
 print_human_checkpoint \
   "RA-07 Complete" \
