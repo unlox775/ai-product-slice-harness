@@ -32,6 +32,16 @@ echo
 # Process doc + helpers
 copy_file "$TEMPLATE/docs/AI-PRODUCT-SLICE-HARNESS.md" "$TARGET/docs/AI-PRODUCT-SLICE-HARNESS.md"
 
+# Non-negotiable agent rules
+copy_file "$TEMPLATE/.cursor/rules/customer-first-and-decomposition.mdc" \
+  "$TARGET/.cursor/rules/customer-first-and-decomposition.mdc"
+if [[ ! -f "$TARGET/AGENTS.md" ]]; then
+  copy_file "$TEMPLATE/AGENTS.md" "$TARGET/AGENTS.md"
+elif ! grep -q "NON-NEGOTIABLE RULE 1" "$TARGET/AGENTS.md"; then
+  { echo; cat "$TEMPLATE/AGENTS.md"; } >> "$TARGET/AGENTS.md"
+  echo "  + AGENTS.md (rules appended)"
+fi
+
 shopt -s nullglob
 for src in "$TEMPLATE/docs/ai-product-slice-harness/"*; do
   base="$(basename "$src")"
