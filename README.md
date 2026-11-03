@@ -31,6 +31,10 @@ Eventually some of the supervision may become more automatic. That is secondary.
 
 ---
 
+## Non-negotiable rules
+
+Read [`AGENTS.md`](AGENTS.md) first. Two rules override everything: **customer-first, never-drop interfaces** (providers own their concurrency; background work never rejects customer requests or discards data) and **always decompose work** (one concern → one spec → one agent → one PR, contracts updated on both sides). Both ship in `template/AGENTS.md`, `template/.cursor/rules/`, and the methodology doc.
+
 ## Core ideas
 
 **Product slices.** Each package should feel like a small company inside the larger company: its own value, inputs, outputs, and a UI you can operate without the final app.
